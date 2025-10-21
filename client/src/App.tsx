@@ -4,6 +4,7 @@ import SignUp from "./pages/AuthPages/SignUp";
 import UserProfiles from "./pages/UserProfiles";
 import Calendar from "./pages/Calendar";
 import BasicTables from "./pages/Tables/BasicTables";
+import DepartmentTables from "./pages/Tables/DepartmentTables";
 import FormElements from "./pages/Forms/FormElements";
 import Blank from "./pages/Blank";
 import AppLayout from "./layout/AppLayout";
@@ -28,8 +29,11 @@ export default function App() {
             {/* Forms */}
             <Route path="/form-elements" element={<FormElements />} />
 
-            {/* Tables */}
+            {/* Tables base */}
             <Route path="/basic-tables" element={<BasicTables />} />
+
+            {/* Tables department */}
+            <Route path="/department-tables" element={<DepartmentTables />} />
 
           </Route>
 

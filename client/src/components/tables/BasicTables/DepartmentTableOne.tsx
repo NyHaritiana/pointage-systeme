@@ -9,48 +9,36 @@ import {
 
 interface Order {
   id: number;
-  name: string;
   department: string;
-  email: string;
-  phone: string;
+  sigle: string;
 }
 
 // Define the table data using the interface
 const tableData: Order[] = [
   {
     id: 1,
-    name: "Rakotobe Lita",
-    email: "rakotobelita@gmail.com",
-    department: "RH",
-    phone: "+261 33 21 236 12",
+    department: "Ressource Humaine",
+    sigle: "RH",
   },
   {
     id: 2,
-    name: "Rabe Doda",
-    email: "rabedoda@gmail.com",
-    department: "AF",
-    phone: "+261 32 35 156 74",
+    department: "Adminitration et Finance",
+    sigle: "AF",
   },
   {
     id: 3,
-    name: "Rasoa Voahangy",
-    email: "rasoavoahangy@gmail.com",
-    department: "COMM",
-    phone: "+261 38 21 541 63",
+    department: "Communication",
+    sigle: "COMM",
   },
   {
     id: 4,
-    name: "Ranginta Soa",
-    email: "rangintasoa@gmail.com",
-    department: "TRAD",
-    phone: "+261 37 45 162 45",
+    department: "Traduction",
+    sigle: "TRAD",
   },
   {
     id: 5,
-    name: "Ravao Bema",
-    email: "ravaobema@gmail.com",
-    department: "MC",
-    phone: "+261 34 26 459 58",
+    department: "Marketing et Commerce",
+    sigle: "MC",
   },
 ];
 
@@ -66,25 +54,13 @@ export default function BasicTableOne() {
                 isHeader
                 className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-sm dark:text-gray-400"
               >
-                Nom et prénom
+                Departement
               </TableCell>
               <TableCell
                 isHeader
                 className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-sm dark:text-gray-400"
               >
-                Département
-              </TableCell>
-              <TableCell
-                isHeader
-                className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-sm dark:text-gray-400"
-              >
-                Email
-              </TableCell>
-              <TableCell
-                isHeader
-                className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-sm dark:text-gray-400"
-              >
-                Phone
+                Sigle
               </TableCell>
             </TableRow>
           </TableHeader>
@@ -94,16 +70,10 @@ export default function BasicTableOne() {
             {tableData.map((order) => (
               <TableRow key={order.id}>
                 <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                  {order.name}
-                </TableCell>
-                <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                   {order.department}
                 </TableCell>
-                <TableCell className="px-4 py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                  {order.email}
-                </TableCell>
-                <TableCell className="px-4 py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                  {order.phone}
+                <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                  {order.sigle}
                 </TableCell>
               </TableRow>
             ))}

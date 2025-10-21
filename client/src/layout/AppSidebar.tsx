@@ -23,12 +23,12 @@ const navItems: NavItem[] = [
   {
     icon: <UserCircleIcon />,
     name: "Personnel",
-    path: "/profile",
+    path: "/basic-tables",
   },
   {
     name: "Département",
     icon: <PageIcon />,
-    path: "/calendar",
+    path: "/department-tables",
   },
   {
     name: "Congé",
@@ -254,21 +254,19 @@ const AppSidebar: React.FC = () => {
       onMouseLeave={() => setIsHovered(false)}
     >
       <div
-        className={`py-8 flex ${
+        className={`py-2 flex ${
           !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
         }`}
       >
-        <Link to="/">
+        <Link to="/" className="flex items-center space-x-2 px-2">
           {isExpanded || isHovered || isMobileOpen ? (
             <>
-              {
-              <h1 className="text-3xl text-gray-600 font-bold dark:hidden">FMBM</h1>
-              /* <img
+              <img
                 className="dark:hidden"
-                src="/images/logo/logo.svg"
+                src="/images/logo/logo.png"
                 alt="Logo"
-                width={150}
-                height={40}
+                width={72}
+                height={64}
               />
               <img
                 className="hidden dark:block"
@@ -276,7 +274,8 @@ const AppSidebar: React.FC = () => {
                 alt="Logo"
                 width={150}
                 height={40}
-              /> */}
+                />
+              <h1 className="text-2xl text-gray-700 font-semibold">FMBM</h1>
             </>
           ) : (
             <img
