@@ -7,7 +7,7 @@ import {
   ChevronDownIcon,
   GridIcon,
   HorizontaLDots,
-  PageIcon,
+  BoxIconLine,
   UserCircleIcon,
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
@@ -21,27 +21,27 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   {
+    icon: <GridIcon />,
+    name: "Tableau de bord",
+    path: "/",
+  },
+  {
     icon: <UserCircleIcon />,
     name: "Personnel",
     path: "/basic-tables",
   },
   {
     name: "Département",
-    icon: <PageIcon />,
+    icon: <BoxIconLine />,
     path: "/department-tables",
   },
   {
-    name: "Congé",
+    name: "Absence",
     icon: <CalenderIcon />,
     subItems: [
-      { name: "Payé", path: "/blank", pro: false },
-      { name: "Sans motif", path: "/form-elements", pro: false },
+      { name: "Calendrier", path: "/calendar", pro: false },
+      { name: "Demande et Historique", path: "/historique-tables", pro: false },
     ],
-  },
-  {
-    icon: <GridIcon />,
-    name: "Tableau de bord",
-    subItems: [{ name: "Ecommerce", path: "/", pro: false }],
   },
 ];
 
@@ -261,21 +261,24 @@ const AppSidebar: React.FC = () => {
         <Link to="/" className="flex items-center space-x-2 px-2">
           {isExpanded || isHovered || isMobileOpen ? (
             <>
-              <img
-                className="dark:hidden"
-                src="/images/logo/logo.png"
-                alt="Logo"
-                width={72}
-                height={64}
-              />
-              <img
-                className="hidden dark:block"
-                src="/images/logo/logo-dark.svg"
-                alt="Logo"
-                width={150}
-                height={40}
+              <div className="w-14 h-14 rounded-full overflow-hidden flex items-center justify-center bg-white dark:bg-white">
+                <img
+                  className="dark:hidden object-cover"
+                  src="/images/logo/logo.png"
+                  alt="Logo"
+                  width={104}
+                  height={104}
                 />
-              <h1 className="text-2xl text-gray-700 font-semibold">FMBM</h1>
+                <img
+                  className="hidden dark:block object-cover"
+                  src="/images/logo/logo.png"
+                  alt="Logo"
+                  width={104}
+                  height={104}
+                />
+              </div>
+              <h1 className="dark:hidden text-2xl text-gray-700 font-semibold">FMBM</h1>
+              <h1 className="hidden dark:block text-2xl text-gray-100 font-semibold">FMBM</h1>
             </>
           ) : (
             <img
