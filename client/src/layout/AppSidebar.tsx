@@ -261,22 +261,20 @@ const AppSidebar: React.FC = () => {
         <Link to="/" className="flex items-center space-x-2 px-2">
           {isExpanded || isHovered || isMobileOpen ? (
             <>
-              <div className="w-14 h-14 rounded-full overflow-hidden flex items-center justify-center bg-white dark:bg-white">
                 <img
                   className="dark:hidden object-cover"
-                  src="/images/logo/logo.png"
+                  src="/images/logo/logo_fmbm-dark.png"
                   alt="Logo"
-                  width={104}
-                  height={104}
+                  width={84}
+                  height={84}
                 />
                 <img
                   className="hidden dark:block object-cover"
-                  src="/images/logo/logo.png"
+                  src="/images/logo/logo_fmbm.png"
                   alt="Logo"
-                  width={104}
-                  height={104}
+                  width={84}
+                  height={84}
                 />
-              </div>
               <h1 className="dark:hidden text-2xl text-gray-700 font-semibold">FMBM</h1>
               <h1 className="hidden dark:block text-2xl text-gray-100 font-semibold">FMBM</h1>
             </>
