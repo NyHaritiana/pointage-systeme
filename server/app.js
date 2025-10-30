@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const departmentRoutes = require('./routes/departmentRoutes.js');
+const employeeRoutes = require('./routes/employeeRoutes.js');
 
 dotenv.config();
 const app = express();
@@ -20,6 +21,7 @@ app.use(bodyParser.json());
 app.use(express.json());
 
 app.use('/api/departments', departmentRoutes);
+app.use('/api/employees', employeeRoutes);
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);

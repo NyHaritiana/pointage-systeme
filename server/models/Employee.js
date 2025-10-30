@@ -5,7 +5,6 @@ const Department = require('./Department');
 const Employee = sequelize.define('Employee', {
     id_employee: {
         type: DataTypes.BIGINT,
-        unique: true,
         autoIncrement: true,
         primaryKey: true
     },
@@ -34,11 +33,11 @@ const Employee = sequelize.define('Employee', {
         allowNull: false
     },
     sexe: {                         //ENUM
-        type: DataTypes.STRING,
+        type: DataTypes.ENUM('Male', 'Femelle'),
         allowNull: false
     },
     etat_civil: {                   //ENUM
-        type: DataTypes.STRING,
+        type: DataTypes.ENUM('Celibataire', 'Marie'),
         allowNull: false
     },
     date_naissance: {
@@ -50,22 +49,22 @@ const Employee = sequelize.define('Employee', {
         allowNull: false
     },
     contrat: {                      //ENUM
-        type: DataTypes.STRING,     
+        type: DataTypes.ENUM('CDI', 'CDD', 'Stage'),     
         allowNull: false
     },
     statut: {                       //ENUM
-        type: DataTypes.STRING,     
+        type: DataTypes.ENUM('Employee', 'Cadre', 'Cadre supérieur'),     
         allowNull: false
     },
     categorie: {                    //ENUM
-        type: DataTypes.STRING,     
+        type: DataTypes.ENUM('1A', '2A', '3A', '4A', '5A', '1B', '2B', '3B', '4B', '5B', 'HC'),     
         allowNull: false
     },
     groupe: {                       //ENUM
-        type: DataTypes.STRING,     
+        type: DataTypes.ENUM('I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'),     
         allowNull: false
     },
-    localité: {
+    localite: {
         type: DataTypes.STRING,     
         allowNull: false
     },
@@ -80,10 +79,6 @@ const Employee = sequelize.define('Employee', {
     projet: {
         type: DataTypes.STRING,     
         allowNull: true
-    },
-    situation_matrimonialle: {      //ENUM
-        type: DataTypes.STRING,     
-        allowNull: false
     },
     nb_enfant: {
         type: DataTypes.INTEGER,     
@@ -113,7 +108,7 @@ const Employee = sequelize.define('Employee', {
 Department.hasMany(Employee, { foreignKey: 'id_departement' });
 Employee.belongsTo(Department, { foreignKey: 'id_departement' });
 
-sequelize.sync()
+sequelize.sync({ alter: true })
   .then(() => {
     console.log('Table EMPLOYEE synchronisée avec succès.');
   })
