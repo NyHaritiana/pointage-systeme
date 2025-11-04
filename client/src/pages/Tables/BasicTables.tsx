@@ -5,11 +5,30 @@ import { useModal } from "../../hooks/useModal";
 import { Modal } from "../../components/ui/modal";
 import { toast } from "react-toastify";
 import { getEmployees, addEmployee, Employee } from "../../api/employeeApi";
+import { getDepartments, Department } from "../../api/departmentApi";
+
 
 export default function BasicTables() {
   const { isOpen, openModal, closeModal } = useModal();
   const [step, setStep] = useState(1);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+
+  useEffect(() => {
+  fetchEmployees();
+  fetchDepartments();
+}, []);
+
+const fetchDepartments = async () => {
+  try {
+    const data = await getDepartments();
+    setDepartments(data);
+  } catch (error: unknown) {
+    if (error instanceof Error) toast.error(error.message);
+    else toast.error("Erreur lors du chargement des départements");
+  }
+};
+
 
   const [formData, setFormData] = useState<Omit<Employee, "id_employee">>({
     num_matricule: 0,
@@ -108,7 +127,7 @@ export default function BasicTables() {
           <button onClick={openModal} className="bg-blue-500 text-white px-2 rounded">Nouveau</button>
         </div>
 
-        <BasicTableOne employees={employees} />
+        <BasicTableOne employees={employees} departments={departments} />
       </div>
 
       <Modal isOpen={isOpen} onClose={closeModal} className="max-w-[600px] p-6 lg:p-10">
@@ -208,10 +227,19 @@ export default function BasicTables() {
               <label htmlFor="salaire" className="text-gray-800 dark:text-gray-300">Salaire :</label>
               <input name="salaire" type="number" value={formData.salaire} onChange={handleChange} placeholder="Salaire" className="h-10 w-full border rounded px-3 dark:text-gray-200" required />
               <label htmlFor="id_departement" className="text-gray-800 dark:text-gray-300">Departement :</label>
-              <select name="id_departement" value={formData.id_departement} onChange={handleChange} className="h-10 w-full border rounded px-3 dark:text-gray-200 dark:bg-black">
+              <select
+                name="id_departement"
+                value={formData.id_departement}
+                onChange={handleChange}
+                className="h-10 w-full border rounded px-3 dark:text-gray-200 dark:bg-black"
+                required
+              >
                 <option value={0}>-- Choisir un département --</option>
-                <option value={1}>Administration et Finance - AF</option>
-                <option value={2}>Ressource Humaine - RH</option>
+                {departments.map((dept) => (
+                  <option key={dept.id_departement} value={dept.id_departement}>
+                    {dept.nom} - {dept.sigle}
+                  </option>
+                ))}
               </select>
               <label htmlFor="fonction" className="text-gray-800 dark:text-gray-300">Fonction :</label>
               <input name="fonction" value={formData.fonction} onChange={handleChange} placeholder="Fonction" className="h-10 w-full border rounded px-3 dark:text-gray-200" required />
