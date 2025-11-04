@@ -5,56 +5,13 @@ import {
   TableHeader,
   TableRow,
 } from "../../ui/table";
+import { Employee } from "../../../api/employeeApi"; // importer ton type Employee
 
-
-interface Order {
-  id: number;
-  name: string;
-  department: string;
-  email: string;
-  phone: string;
+interface BasicTableOneProps {
+  employees: Employee[];
 }
 
-// Define the table data using the interface
-const tableData: Order[] = [
-  {
-    id: 1,
-    name: "Rakotobe Lita",
-    email: "rakotobelita@gmail.com",
-    department: "RH",
-    phone: "+261 33 21 236 12",
-  },
-  {
-    id: 2,
-    name: "Rabe Doda",
-    email: "rabedoda@gmail.com",
-    department: "AF",
-    phone: "+261 32 35 156 74",
-  },
-  {
-    id: 3,
-    name: "Rasoa Voahangy",
-    email: "rasoavoahangy@gmail.com",
-    department: "COMM",
-    phone: "+261 38 21 541 63",
-  },
-  {
-    id: 4,
-    name: "Ranginta Soa",
-    email: "rangintasoa@gmail.com",
-    department: "TRAD",
-    phone: "+261 37 45 162 45",
-  },
-  {
-    id: 5,
-    name: "Ravao Bema",
-    email: "ravaobema@gmail.com",
-    department: "MC",
-    phone: "+261 34 26 459 58",
-  },
-];
-
-export default function BasicTableOne() {
+export default function BasicTableOne({ employees }: BasicTableOneProps) {
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
       <div className="max-w-full overflow-x-auto">
@@ -62,48 +19,36 @@ export default function BasicTableOne() {
           {/* Table Header */}
           <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
             <TableRow>
-              <TableCell
-                isHeader
-                className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-sm dark:text-gray-400"
-              >
+              <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-sm dark:text-gray-400">
                 Nom et prénom
               </TableCell>
-              <TableCell
-                isHeader
-                className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-sm dark:text-gray-400"
-              >
+              <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-sm dark:text-gray-400">
                 Département
               </TableCell>
-              <TableCell
-                isHeader
-                className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-sm dark:text-gray-400"
-              >
+              <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-sm dark:text-gray-400">
                 Email
               </TableCell>
-              <TableCell
-                isHeader
-                className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-sm dark:text-gray-400"
-              >
-                Phone
+              <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                Téléphone
               </TableCell>
             </TableRow>
           </TableHeader>
 
           {/* Table Body */}
           <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-            {tableData.map((order) => (
-              <TableRow key={order.id}>
+            {employees.map((emp) => (
+              <TableRow key={emp.id_employee}>
                 <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                  {order.name}
+                  {emp.nom} {emp.prenom || ""}
                 </TableCell>
                 <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                  {order.department}
+                  {emp.id_departement} {/* si tu veux le nom du département, il faudra le joindre */}
                 </TableCell>
                 <TableCell className="px-4 py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                  {order.email}
+                  {emp.email || "-"}
                 </TableCell>
                 <TableCell className="px-4 py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                  {order.phone}
+                  {emp.telephone}
                 </TableCell>
               </TableRow>
             ))}

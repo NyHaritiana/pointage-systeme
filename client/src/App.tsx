@@ -12,6 +12,8 @@ import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
 import HistoriqueTables from "./pages/Tables/HistoriqueTables";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export default function App() {
   return (
@@ -49,6 +51,7 @@ export default function App() {
 
         </Routes>
       </Router>
+      <ToastContainer position="bottom-right" autoClose={3000} theme="colored" />
     </>
   );
 }

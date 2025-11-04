@@ -4,6 +4,8 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const departmentRoutes = require('./routes/departmentRoutes.js');
 const employeeRoutes = require('./routes/employeeRoutes.js');
+const absenceRoutes = require('./routes/absenceRoutes.js');
+const pointageRoutes = require('./routes/pointageRoutes.js');
 
 dotenv.config();
 const app = express();
@@ -22,6 +24,8 @@ app.use(express.json());
 
 app.use('/api/departments', departmentRoutes);
 app.use('/api/employees', employeeRoutes);
+app.use('/api/absences', absenceRoutes);
+app.use('/api/pointages', pointageRoutes);
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);

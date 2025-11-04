@@ -5,44 +5,13 @@ import {
   TableHeader,
   TableRow,
 } from "../../ui/table";
+import { Department } from "../../../api/departmentApi";
 
-
-interface Order {
-  id: number;
-  department: string;
-  sigle: string;
+interface DepartmentTableOneProps {
+  departments: Department[];
 }
 
-// Define the table data using the interface
-const tableData: Order[] = [
-  {
-    id: 1,
-    department: "Ressource Humaine",
-    sigle: "RH",
-  },
-  {
-    id: 2,
-    department: "Adminitration et Finance",
-    sigle: "AF",
-  },
-  {
-    id: 3,
-    department: "Communication",
-    sigle: "COMM",
-  },
-  {
-    id: 4,
-    department: "Traduction",
-    sigle: "TRAD",
-  },
-  {
-    id: 5,
-    department: "Marketing et Commerce",
-    sigle: "MC",
-  },
-];
-
-export default function DepartmentTableOne() {
+export default function DepartmentTableOne({ departments }: DepartmentTableOneProps) {
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
       <div className="max-w-full overflow-x-auto">
@@ -50,6 +19,12 @@ export default function DepartmentTableOne() {
           {/* Table Header */}
           <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
             <TableRow>
+              <TableCell
+                isHeader
+                className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-sm dark:text-gray-400"
+              >
+                ID
+              </TableCell>
               <TableCell
                 isHeader
                 className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-sm dark:text-gray-400"
@@ -67,13 +42,16 @@ export default function DepartmentTableOne() {
 
           {/* Table Body */}
           <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-            {tableData.map((order) => (
-              <TableRow key={order.id}>
+            {departments.map((dep) => (
+              <TableRow key={dep.id_departement}>
                 <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                  {order.department}
+                  {dep.id_departement}
                 </TableCell>
                 <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                  {order.sigle}
+                  {dep.nom}
+                </TableCell>
+                <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                  {dep.sigle}
                 </TableCell>
               </TableRow>
             ))}
