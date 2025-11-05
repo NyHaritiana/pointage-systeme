@@ -1,3 +1,5 @@
+import { FiEdit, FiTrash2 } from "react-icons/fi";
+
 import {
   Table,
   TableBody,
@@ -37,6 +39,9 @@ export default function BasicTableOne({ employees, departments }: BasicTableOneP
               <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-sm dark:text-gray-400">
                 Téléphone
               </TableCell>
+              <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-center text-theme-sm dark:text-gray-400">
+                Action
+              </TableCell>
             </TableRow>
           </TableHeader>
 
@@ -57,6 +62,21 @@ export default function BasicTableOne({ employees, departments }: BasicTableOneP
 
                 <TableCell className="px-4 py-3 text-gray-500 text-theme-sm dark:text-gray-400">
                   {emp.telephone}
+                </TableCell>
+                <TableCell className="px-4 py-3 flex justify-center gap-3">
+                  <button
+                    className="text-blue-500 hover:text-blue-700 transition"
+                    title="Modifier"
+                  >
+                    <FiEdit size={18} />
+                  </button>
+
+                  <button
+                    className="text-red-500 hover:text-red-700 transition"
+                    title="Supprimer"
+                  >
+                    <FiTrash2 size={18} />
+                  </button>
                 </TableCell>
               </TableRow>
             ))}
