@@ -4,7 +4,7 @@ import BasicTableOne from "../../components/tables/BasicTables/BasicTableOne";
 import { useModal } from "../../hooks/useModal";
 import { Modal } from "../../components/ui/modal";
 import { toast } from "react-toastify";
-import { getEmployees, addEmployee, Employee } from "../../api/employeeApi";
+import { getEmployees, addEmployee, deleteEmployee, editEmployee, Employee } from "../../api/employeeApi";
 import { getDepartments, Department } from "../../api/departmentApi";
 
 
@@ -13,6 +13,8 @@ export default function BasicTables() {
   const [step, setStep] = useState(1);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   useEffect(() => {
   fetchEmployees();
@@ -57,6 +59,12 @@ const fetchDepartments = async () => {
 
   const nextStep = () => setStep((prev) => Math.min(prev + 1, 5));
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
+
+  const [editStep, setEditStep] = useState(1);
+
+  const nextEditStep = () => setEditStep((prev) => Math.min(prev + 1, 3));
+  const prevEditStep = () => setEditStep((prev) => Math.max(prev - 1, 1));
+
 
   // Charger les employés
   useEffect(() => {
@@ -118,6 +126,35 @@ const fetchDepartments = async () => {
     }
   };
 
+    const handleDelete = async (id: number) => {
+    try {
+      await deleteEmployee(id);
+      toast.success("Employé supprimé avec succès !");
+      setEmployees((prev) => prev.filter((e) => e.id_employee !== id));
+    } catch (error) {
+      console.error(error);
+      toast.error("Erreur lors de la suppression.");
+    }
+  };
+
+    const handleEdit = (emp: Employee) => {
+    setSelectedEmployee(emp);
+    setIsEditModalOpen(true);
+  };
+
+const handleUpdate = async () => {
+  if (!selectedEmployee) return;
+  try {
+    await editEmployee(selectedEmployee.id_employee, selectedEmployee);
+    toast.success("Employé modifié avec succès !");
+    setIsEditModalOpen(false);
+    fetchEmployees(); // au lieu de loadData()
+  } catch (error) {
+    console.error(error);
+    toast.error("Erreur lors de la mise à jour.");
+  }
+};
+
   return (
     <>
       <PageMeta title="pointage-systeme | FMBM" description="liste des employés et ajout" />
@@ -127,7 +164,7 @@ const fetchDepartments = async () => {
           <button onClick={openModal} className="bg-blue-500 text-white px-2 rounded">Nouveau</button>
         </div>
 
-        <BasicTableOne employees={employees} departments={departments} />
+        <BasicTableOne employees={employees} departments={departments} onDelete={handleDelete} onEdit={handleEdit} />
       </div>
 
       <Modal isOpen={isOpen} onClose={closeModal} className="max-w-[600px] p-6 lg:p-10">
@@ -275,6 +312,199 @@ const fetchDepartments = async () => {
             )}
           </div>
         </form>
+      </Modal>
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        className="max-w-[600px] p-6 lg:p-10"
+      >
+        {selectedEmployee && (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleUpdate();
+            }}
+          >
+            <h3 className="text-lg font-semibold mb-4 text-center dark:text-gray-100">
+              Modifier l’employé
+            </h3>
+
+            {/* Barre d’étapes */}
+            <div className="flex justify-between mb-6">
+              {["Informations perso", "Professionnelles", "Département / Salaire"].map((label, index) => (
+                <div key={index} className="flex flex-col items-center w-1/3">
+                  <div
+                    className={`w-8 h-8 flex items-center justify-center rounded-full border-2 transition-all ${
+                      editStep === index + 1
+                        ? "bg-blue-500 text-white border-blue-500"
+                        : editStep > index + 1
+                        ? "bg-green-500 text-white border-green-500"
+                        : "border-gray-300 text-gray-500"
+                    }`}
+                  >
+                    {index + 1}
+                  </div>
+                  <span
+                    className={`mt-2 text-xs ${
+                      editStep === index + 1 ? "text-blue-600 font-semibold" : "text-gray-500"
+                    }`}
+                  >
+                    {label}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Étape 1 */}
+            {editStep === 1 && (
+              <div className="space-y-3">
+                <label className="text-gray-800 dark:text-gray-300">Nom :</label>
+                <input
+                  name="nom"
+                  value={selectedEmployee.nom}
+                  onChange={(e) =>
+                    setSelectedEmployee({ ...selectedEmployee, nom: e.target.value })
+                  }
+                  className="h-10 w-full border rounded px-3 dark:text-gray-200"
+                />
+
+                <label className="text-gray-800 dark:text-gray-300">Prénom :</label>
+                <input
+                  name="prenom"
+                  value={selectedEmployee.prenom || ""}
+                  onChange={(e) =>
+                    setSelectedEmployee({ ...selectedEmployee, prenom: e.target.value })
+                  }
+                  className="h-10 w-full border rounded px-3 dark:text-gray-200"
+                />
+
+                <label className="text-gray-800 dark:text-gray-300">Téléphone :</label>
+                <input
+                  name="telephone"
+                  value={selectedEmployee.telephone}
+                  onChange={(e) =>
+                    setSelectedEmployee({ ...selectedEmployee, telephone: e.target.value })
+                  }
+                  className="h-10 w-full border rounded px-3 dark:text-gray-200"
+                />
+              </div>
+            )}
+
+            {/* Étape 2 */}
+            {editStep === 2 && (
+              <div className="space-y-3">
+                <label className="text-gray-800 dark:text-gray-300">Email :</label>
+                <input
+                  name="email"
+                  value={selectedEmployee.email || ""}
+                  onChange={(e) =>
+                    setSelectedEmployee({ ...selectedEmployee, email: e.target.value })
+                  }
+                  className="h-10 w-full border rounded px-3 dark:text-gray-200"
+                />
+
+                <label className="text-gray-800 dark:text-gray-300">Adresse :</label>
+                <input
+                  name="adresse"
+                  value={selectedEmployee.adresse}
+                  onChange={(e) =>
+                    setSelectedEmployee({ ...selectedEmployee, adresse: e.target.value })
+                  }
+                  className="h-10 w-full border rounded px-3 dark:text-gray-200"
+                />
+
+                <label className="text-gray-800 dark:text-gray-300">Localité :</label>
+                <input
+                  name="localite"
+                  value={selectedEmployee.localite}
+                  onChange={(e) =>
+                    setSelectedEmployee({ ...selectedEmployee, localite: e.target.value })
+                  }
+                  className="h-10 w-full border rounded px-3 dark:text-gray-200"
+                />
+              </div>
+            )}
+
+            {/* Étape 3 */}
+            {editStep === 3 && (
+              <div className="space-y-3">
+                <label className="text-gray-800 dark:text-gray-300">Fonction :</label>
+                <input
+                  name="fonction"
+                  value={selectedEmployee.fonction}
+                  onChange={(e) =>
+                    setSelectedEmployee({ ...selectedEmployee, fonction: e.target.value })
+                  }
+                  className="h-10 w-full border rounded px-3 dark:text-gray-200"
+                />
+
+                <label className="text-gray-800 dark:text-gray-300">Salaire :</label>
+                <input
+                  name="salaire"
+                  type="number"
+                  value={selectedEmployee.salaire}
+                  onChange={(e) =>
+                    setSelectedEmployee({
+                      ...selectedEmployee,
+                      salaire: Number(e.target.value),
+                    })
+                  }
+                  className="h-10 w-full border rounded px-3 dark:text-gray-200"
+                />
+
+                <label className="text-gray-800 dark:text-gray-300">Département :</label>
+                <select
+                  name="id_departement"
+                  value={selectedEmployee.id_departement}
+                  onChange={(e) =>
+                    setSelectedEmployee({
+                      ...selectedEmployee,
+                      id_departement: Number(e.target.value),
+                    })
+                  }
+                  className="h-10 w-full border rounded px-3 dark:text-gray-200 dark:bg-black"
+                >
+                  {departments.map((d) => (
+                    <option key={d.id_departement} value={d.id_departement}>
+                      {d.nom} ({d.sigle})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Navigation */}
+            <div className="flex justify-between mt-6">
+              {editStep > 1 ? (
+                <button
+                  type="button"
+                  onClick={prevEditStep}
+                  className="px-4 py-2 border rounded text-gray-700 dark:text-gray-300"
+                >
+                  Précédent
+                </button>
+              ) : (
+                <div></div>
+              )}
+              {editStep < 3 ? (
+                <button
+                  type="button"
+                  onClick={nextEditStep}
+                  className="px-4 py-2 bg-blue-600 text-white rounded"
+                >
+                  Suivant
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-green-600 text-white rounded"
+                >
+                  Enregistrer
+                </button>
+              )}
+            </div>
+          </form>
+        )}
       </Modal>
     </>
   );

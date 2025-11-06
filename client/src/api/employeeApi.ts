@@ -69,3 +69,17 @@ export const deleteEmployee = async (id: number): Promise<void> => {
     throw error;
   }
 };
+
+export const editEmployee = async (
+  id: number,
+  employeeData: Partial<Omit<Employee, "id_employee">>
+): Promise<Employee> => {
+  try {
+    const res = await axios.put<Employee>(`${API_URL}/${id}`, employeeData);
+    return res.data;
+  } catch (error) {
+    console.error("Erreur lors de la modification de l'employé :", error);
+    throw error;
+  }
+};
+

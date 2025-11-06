@@ -13,9 +13,11 @@ import { Department } from "../../../api/departmentApi";
 interface BasicTableOneProps {
   employees: Employee[];
   departments: Department[];
+  onDelete: (id: number) => void;
+  onEdit: (employee: Employee) => void;
 }
 
-export default function BasicTableOne({ employees, departments }: BasicTableOneProps) {
+export default function BasicTableOne({ employees, departments, onDelete, onEdit }: BasicTableOneProps) {
   const deptList = departments || [];
 
   const deptMap = new Map<number, string>();
@@ -65,6 +67,7 @@ export default function BasicTableOne({ employees, departments }: BasicTableOneP
                 </TableCell>
                 <TableCell className="px-4 py-3 flex justify-center gap-3">
                   <button
+                    onClick={() => onEdit(emp)}
                     className="text-blue-500 hover:text-blue-700 transition"
                     title="Modifier"
                   >
@@ -72,6 +75,11 @@ export default function BasicTableOne({ employees, departments }: BasicTableOneP
                   </button>
 
                   <button
+                      onClick={() => {
+                        if (window.confirm("Voulez-vous vraiment supprimer cet employé ?")) {
+                          onDelete(emp.id_employee);
+                        }
+                      }}
                     className="text-red-500 hover:text-red-700 transition"
                     title="Supprimer"
                   >
