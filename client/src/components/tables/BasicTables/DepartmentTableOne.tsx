@@ -10,9 +10,11 @@ import { FiEdit, FiTrash2 } from "react-icons/fi";
 
 interface DepartmentTableOneProps {
   departments: Department[];
+  onDelete: (id: number) => void;
+  onEdit: (department: Department) => void;
 }
 
-export default function DepartmentTableOne({ departments }: DepartmentTableOneProps) {
+export default function DepartmentTableOne({ departments, onDelete, onEdit }: DepartmentTableOneProps) {
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
       <div className="max-w-full overflow-x-auto">
@@ -62,6 +64,7 @@ export default function DepartmentTableOne({ departments }: DepartmentTableOnePr
                 </TableCell>
                 <TableCell className="px-4 py-3 flex justify-center gap-3">
                   <button
+                  onClick={() => onEdit(dep)}
                     className="text-blue-500 hover:text-blue-700 transition"
                     title="Modifier"
                   >
@@ -69,6 +72,11 @@ export default function DepartmentTableOne({ departments }: DepartmentTableOnePr
                   </button>
 
                   <button
+                  onClick={() => {
+                        if (window.confirm("Voulez-vous vraiment supprimer cet département ?")) {
+                          onDelete(dep.id_departement);
+                        }
+                      }}
                     className="text-red-500 hover:text-red-700 transition"
                     title="Supprimer"
                   >

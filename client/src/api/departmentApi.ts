@@ -36,3 +36,16 @@ export const deleteDepartment = async (id: number): Promise<void> => {
     throw error;
   }
 };
+
+export const editDepartment = async (
+  id: number,
+  departmentData: Partial<Omit<Department, "id_departement">>
+): Promise<Department> => {
+  try {
+    const res = await axios.put<Department>(`${API_URL}/${id}`, departmentData);
+    return res.data;
+  } catch (error) {
+    console.error("Erreur lors de la modification du departement :", error);
+    throw error;
+  }
+};

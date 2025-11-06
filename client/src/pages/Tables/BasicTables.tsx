@@ -15,6 +15,14 @@ export default function BasicTables() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState<Omit<Employee, "id_employee"> | null>(null);
+
+const handleEdit = (emp: Employee) => {
+  setSelectedEmployee(emp);
+  setEditFormData({ ...emp });
+  setIsEditModalOpen(true);
+};
+
 
   useEffect(() => {
   fetchEmployees();
@@ -137,23 +145,19 @@ const fetchDepartments = async () => {
     }
   };
 
-    const handleEdit = (emp: Employee) => {
-    setSelectedEmployee(emp);
-    setIsEditModalOpen(true);
-  };
-
 const handleUpdate = async () => {
-  if (!selectedEmployee) return;
+  if (!editFormData || !selectedEmployee) return;
   try {
-    await editEmployee(selectedEmployee.id_employee, selectedEmployee);
+    await editEmployee(selectedEmployee.id_employee, editFormData);
     toast.success("Employé modifié avec succès !");
     setIsEditModalOpen(false);
-    fetchEmployees(); // au lieu de loadData()
+    fetchEmployees();
   } catch (error) {
     console.error(error);
     toast.error("Erreur lors de la mise à jour.");
   }
 };
+
 
   return (
     <>
@@ -315,7 +319,10 @@ const handleUpdate = async () => {
       </Modal>
       <Modal
         isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditStep(1);
+        }}
         className="max-w-[600px] p-6 lg:p-10"
       >
         {selectedEmployee && (
@@ -331,7 +338,7 @@ const handleUpdate = async () => {
 
             {/* Barre d’étapes */}
             <div className="flex justify-between mb-6">
-              {["Informations perso", "Professionnelles", "Département / Salaire"].map((label, index) => (
+              {["Infos perso", "Infos sup", "Contrat"].map((label, index) => (
                 <div key={index} className="flex flex-col items-center w-1/3">
                   <div
                     className={`w-8 h-8 flex items-center justify-center rounded-full border-2 transition-all ${
@@ -361,9 +368,9 @@ const handleUpdate = async () => {
                 <label className="text-gray-800 dark:text-gray-300">Nom :</label>
                 <input
                   name="nom"
-                  value={selectedEmployee.nom}
+                  value={editFormData?.nom}
                   onChange={(e) =>
-                    setSelectedEmployee({ ...selectedEmployee, nom: e.target.value })
+                    setEditFormData(prev => prev ? { ...prev, nom: e.target.value } : null)
                   }
                   className="h-10 w-full border rounded px-3 dark:text-gray-200"
                 />
@@ -371,9 +378,9 @@ const handleUpdate = async () => {
                 <label className="text-gray-800 dark:text-gray-300">Prénom :</label>
                 <input
                   name="prenom"
-                  value={selectedEmployee.prenom || ""}
+                  value={editFormData?.prenom || ""}
                   onChange={(e) =>
-                    setSelectedEmployee({ ...selectedEmployee, prenom: e.target.value })
+                    setEditFormData(prev => prev ? { ...prev, prenom: e.target.value } : null)
                   }
                   className="h-10 w-full border rounded px-3 dark:text-gray-200"
                 />
@@ -381,9 +388,9 @@ const handleUpdate = async () => {
                 <label className="text-gray-800 dark:text-gray-300">Téléphone :</label>
                 <input
                   name="telephone"
-                  value={selectedEmployee.telephone}
+                  value={editFormData?.telephone}
                   onChange={(e) =>
-                    setSelectedEmployee({ ...selectedEmployee, telephone: e.target.value })
+                    setEditFormData(prev => prev ? { ...prev, telephone: e.target.value } : null)
                   }
                   className="h-10 w-full border rounded px-3 dark:text-gray-200"
                 />
@@ -396,9 +403,9 @@ const handleUpdate = async () => {
                 <label className="text-gray-800 dark:text-gray-300">Email :</label>
                 <input
                   name="email"
-                  value={selectedEmployee.email || ""}
+                  value={editFormData?.email || ""}
                   onChange={(e) =>
-                    setSelectedEmployee({ ...selectedEmployee, email: e.target.value })
+                    setEditFormData(prev => prev ? { ...prev, email: e.target.value } : null)
                   }
                   className="h-10 w-full border rounded px-3 dark:text-gray-200"
                 />
@@ -406,9 +413,9 @@ const handleUpdate = async () => {
                 <label className="text-gray-800 dark:text-gray-300">Adresse :</label>
                 <input
                   name="adresse"
-                  value={selectedEmployee.adresse}
+                  value={editFormData?.adresse}
                   onChange={(e) =>
-                    setSelectedEmployee({ ...selectedEmployee, adresse: e.target.value })
+                    setEditFormData(prev => prev ? { ...prev, adresse: e.target.value } : null)
                   }
                   className="h-10 w-full border rounded px-3 dark:text-gray-200"
                 />
@@ -416,9 +423,9 @@ const handleUpdate = async () => {
                 <label className="text-gray-800 dark:text-gray-300">Localité :</label>
                 <input
                   name="localite"
-                  value={selectedEmployee.localite}
+                  value={editFormData?.localite}
                   onChange={(e) =>
-                    setSelectedEmployee({ ...selectedEmployee, localite: e.target.value })
+                    setEditFormData(prev => prev ? { ...prev, localite: e.target.value } : null)
                   }
                   className="h-10 w-full border rounded px-3 dark:text-gray-200"
                 />
@@ -431,23 +438,24 @@ const handleUpdate = async () => {
                 <label className="text-gray-800 dark:text-gray-300">Fonction :</label>
                 <input
                   name="fonction"
-                  value={selectedEmployee.fonction}
+                  value={editFormData?.fonction}
                   onChange={(e) =>
-                    setSelectedEmployee({ ...selectedEmployee, fonction: e.target.value })
+                    setEditFormData(prev => prev ? { ...prev, fonction: e.target.value } : null)
                   }
                   className="h-10 w-full border rounded px-3 dark:text-gray-200"
+                  required
                 />
 
                 <label className="text-gray-800 dark:text-gray-300">Salaire :</label>
                 <input
                   name="salaire"
                   type="number"
-                  value={selectedEmployee.salaire}
+                  value={editFormData?.salaire}
                   onChange={(e) =>
-                    setSelectedEmployee({
-                      ...selectedEmployee,
+                    setEditFormData(prev => prev ? {
+                      ...prev,
                       salaire: Number(e.target.value),
-                    })
+                    } : null)
                   }
                   className="h-10 w-full border rounded px-3 dark:text-gray-200"
                 />
@@ -455,12 +463,12 @@ const handleUpdate = async () => {
                 <label className="text-gray-800 dark:text-gray-300">Département :</label>
                 <select
                   name="id_departement"
-                  value={selectedEmployee.id_departement}
+                  value={editFormData?.id_departement}
                   onChange={(e) =>
-                    setSelectedEmployee({
-                      ...selectedEmployee,
+                    setEditFormData(prev => prev ? {
+                      ...prev,
                       id_departement: Number(e.target.value),
-                    })
+                    } : null)
                   }
                   className="h-10 w-full border rounded px-3 dark:text-gray-200 dark:bg-black"
                 >
@@ -474,35 +482,38 @@ const handleUpdate = async () => {
             )}
 
             {/* Navigation */}
-            <div className="flex justify-between mt-6">
-              {editStep > 1 ? (
-                <button
-                  type="button"
-                  onClick={prevEditStep}
-                  className="px-4 py-2 border rounded text-gray-700 dark:text-gray-300"
-                >
-                  Précédent
-                </button>
-              ) : (
-                <div></div>
-              )}
-              {editStep < 3 ? (
-                <button
-                  type="button"
-                  onClick={nextEditStep}
-                  className="px-4 py-2 bg-blue-600 text-white rounded"
-                >
-                  Suivant
-                </button>
-              ) : (
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-green-600 text-white rounded"
-                >
-                  Enregistrer
-                </button>
-              )}
-            </div>
+            {/* Navigation */}
+      <div className="flex justify-between mt-6">
+        {editStep > 1 ? (
+          <button
+            type="button"
+            onClick={prevEditStep}
+            className="px-4 py-2 border rounded text-gray-700 dark:text-gray-300"
+          >
+            Précédent
+          </button>
+        ) : (
+          <div></div>
+        )}
+        
+        {editStep < 3 ? (
+          <button
+            type="button"
+            onClick={nextEditStep}
+            className="px-4 py-2 bg-blue-600 text-white rounded"
+          >
+            Suivant
+          </button>
+        ) : (
+          <button
+            type="button" // ← IMPORTANT: type="button" et non "submit"
+            onClick={handleUpdate} // ← Appeler handleUpdate directement
+            className="px-4 py-2 bg-green-600 text-white rounded"
+          >
+            Enregistrer
+          </button>
+        )}
+      </div>
           </form>
         )}
       </Modal>

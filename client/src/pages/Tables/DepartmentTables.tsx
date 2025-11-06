@@ -3,14 +3,16 @@ import PageMeta from "../../components/common/PageMeta";
 import DepartmentTableOne from "../../components/tables/BasicTables/DepartmentTableOne";
 import { useModal } from "../../hooks/useModal";
 import { Modal } from "../../components/ui/modal";
-import { getDepartments, addDepartment, Department } from "../../api/departmentApi";
+import { getDepartments, addDepartment, deleteDepartment, Department, editDepartment } from "../../api/departmentApi";
 import { toast } from "react-toastify";
 
 
 export default function DepartmentTables() {
   const { isOpen, openModal, closeModal } = useModal();
-const [departments, setDepartments] = useState<Department[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [formData, setFormData] = useState({ nom: "", sigle: "" });
+  const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Charger les départements au montage
   useEffect(() => {
@@ -34,6 +36,36 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
   closeModal();
   fetchDepartments();
 };
+
+    const handleDelete = async (id: number) => {
+    try {
+      await deleteDepartment(id);
+      toast.success("Employé supprimé avec succès !");
+      setDepartments((prev) => prev.filter((e) => e.id_departement !== id));
+    } catch (error) {
+      console.error(error);
+      toast.error("Erreur lors de la suppression.");
+    }
+  };
+
+    const handleEdit = (dep: Department) => {
+    setSelectedDepartment(dep);
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdate = async () => {
+    if (!selectedDepartment) return;
+    try {
+      await editDepartment(selectedDepartment.id_departement, selectedDepartment);
+      toast.success("Employé modifié avec succès !");
+      setIsEditModalOpen(false);
+      fetchDepartments();
+    } catch (error) {
+      console.error(error);
+      toast.error("Erreur lors de la mise à jour.");
+    }
+  };
+
   return (
     <>
       <PageMeta title="pointage-systeme | FMBM" description="Liste des départements" />
@@ -47,7 +79,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         </div>
 
         {/* Table d'affichage */}
-        <DepartmentTableOne departments={departments} />
+        <DepartmentTableOne departments={departments} onDelete={handleDelete} onEdit={handleEdit} />
       </div>
 
       {/* Modal d'ajout */}
@@ -101,6 +133,53 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
               </button>
             </div>
           </form>
+        </div>
+      </Modal>
+      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} className="max-w-[600px] p-6 lg:p-10">
+        <h2 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">
+          Modifier un employé
+        </h2>
+
+        <div className="flex flex-col gap-3">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Nom
+          </label>
+          <input
+            type="text"
+            placeholder="Nom"
+            value={selectedDepartment?.nom || ""}
+            onChange={(e) =>
+              setSelectedDepartment((prev) => (prev ? { ...prev, nom: e.target.value } : prev))
+            }
+            className="border rounded-md px-3 py-2 dark:text-gray-300"
+          />
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Sigle
+          </label>
+          <input
+            type="text"
+            placeholder="Prénom"
+            value={selectedDepartment?.sigle || ""}
+            onChange={(e) =>
+              setSelectedDepartment((prev) => (prev ? { ...prev, sigle: e.target.value } : prev))
+            }
+            className="border rounded-md px-3 py-2 dark:text-gray-300"
+          />
+        </div>
+
+        <div className="flex justify-end gap-3 mt-4">
+          <button
+            onClick={() => setIsEditModalOpen(false)}
+            className="px-4 py-2 rounded-md bg-gray-400 text-white"
+          >
+            Annuler
+          </button>
+          <button
+            onClick={handleUpdate}
+            className="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700"
+          >
+            Enregistrer
+          </button>
         </div>
       </Modal>
     </>
