@@ -9,6 +9,7 @@ import {
   HorizontaLDots,
   BoxIconLine,
   UserCircleIcon,
+  TimeIcon, 
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
 
@@ -34,6 +35,11 @@ const navItems: NavItem[] = [
     name: "Département",
     icon: <BoxIconLine />,
     path: "/department-tables",
+  },
+  {
+    name: "Horaire",
+    icon: <TimeIcon />,
+    path: "/horaire",
   },
   {
     name: "Absence",

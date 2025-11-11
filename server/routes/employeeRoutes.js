@@ -4,6 +4,7 @@ const {
   createEmployee,
   getEmployees,
   getEmployeeById,
+  getEmployeeByMatricule,
   updateEmployee,
   deleteEmployee,
 } = require('../controllers/employeeController.js');
@@ -11,6 +12,7 @@ const {
 router.post('/', createEmployee);
 router.get('/', getEmployees);
 router.get('/:id_employee', getEmployeeById);
+router.get('/by-matricule/:num_matricule', getEmployeeByMatricule);
 router.put('/:id_employee', updateEmployee);
 router.delete('/:id_employee', deleteEmployee);
 

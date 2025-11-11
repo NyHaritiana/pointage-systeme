@@ -1,14 +1,53 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
+import { toast } from "react-toastify";
+import axios from "axios";
 import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "../../icons";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Checkbox from "../form/input/Checkbox";
 import Button from "../ui/button/Button";
+import { loginUser } from "../../api/authApi";
 
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
+  
+  const navigate = useNavigate();
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.email || !formData.password) {
+      toast.error("Veuillez remplir tous les champs !");
+      return;
+    }
+
+    try {
+      const res = await loginUser(formData.email, formData.password);
+      toast.success("Connexion réussie !");
+      localStorage.setItem("token", res.token);
+      localStorage.setItem("user", JSON.stringify(res.user));
+      navigate("/");
+    }  catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response) {
+        toast.error(err.response.data?.message || "Erreur lors de l'inscription.");
+      } else if (err instanceof Error) {
+        toast.error(err.message);
+      } else {
+        toast.error("Erreur inconnue");
+      }
+    }
+  };
+
   return (
     <div className="flex flex-col flex-1">
       <div className="w-full max-w-md pt-10 mx-auto">
@@ -36,13 +75,19 @@ export default function SignInForm() {
                 <div className="w-full border-t border-gray-200 dark:border-gray-800"></div>
               </div>
             </div>
-            <form>
+            <form onSubmit={handleSubmit}>
               <div className="space-y-6">
                 <div>
                   <Label>
                     Email <span className="text-error-500">*</span>{" "}
                   </Label>
-                  <Input placeholder="info@gmail.com" />
+                  <Input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="exemple@gmail.com"
+                  />
                 </div>
                 <div>
                   <Label>
@@ -51,7 +96,10 @@ export default function SignInForm() {
                   <div className="relative">
                     <Input
                       type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password"
+                      name="password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      placeholder="Entrez votre mot de passe"
                     />
                     <span
                       onClick={() => setShowPassword(!showPassword)}

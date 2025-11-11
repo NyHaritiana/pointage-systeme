@@ -30,6 +30,22 @@ const getEmployeeById = async (req, res) => {
   }
 };
 
+const getEmployeeByMatricule = async (req, res) => {
+  try {
+    const { num_matricule } = req.params;
+    const employee = await Employee.findOne({ where: { num_matricule } });
+
+    if (!employee) {
+      return res.status(404).json({ message: "Employé non trouvé" });
+    }
+
+    res.json({ employeeId: employee.id_employee });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
 const updateEmployee = async (req, res) => {
   try {
     const [updated] = await Employee.update(req.body, {
@@ -62,6 +78,7 @@ module.exports = {
   createEmployee,
   getEmployees,
   getEmployeeById,
+  getEmployeeByMatricule,
   updateEmployee,
   deleteEmployee
 };

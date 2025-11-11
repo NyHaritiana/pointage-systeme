@@ -6,6 +6,8 @@ const departmentRoutes = require('./routes/departmentRoutes.js');
 const employeeRoutes = require('./routes/employeeRoutes.js');
 const absenceRoutes = require('./routes/absenceRoutes.js');
 const pointageRoutes = require('./routes/pointageRoutes.js');
+const hoaraireRoutes = require('./routes/horaireRoutes.js');
+const userRoutes = require('./routes/userRoutes.js');
 
 dotenv.config();
 const app = express();
@@ -26,6 +28,8 @@ app.use('/api/departments', departmentRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/absences', absenceRoutes);
 app.use('/api/pointages', pointageRoutes);
+app.use('/api/horaires', hoaraireRoutes);
+app.use('/api/users', userRoutes);
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);

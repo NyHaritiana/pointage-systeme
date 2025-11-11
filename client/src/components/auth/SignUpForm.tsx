@@ -3,11 +3,61 @@ import { Link } from "react-router";
 import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "../../icons";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
-import Checkbox from "../form/input/Checkbox";
+import { registerUser, User } from "../../api/authApi";
+import axios from "axios";
+import { toast } from "react-toastify";
 
 export default function SignUpForm() {
   const [showPassword, setShowPassword] = useState(false);
-  const [isChecked, setIsChecked] = useState(false);
+  const [formData, setFormData] = useState({
+    username: "",
+    email: "",
+    password: "",
+    num_matricule: "",
+    role: "employe",
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      const res = await axios.get<{ employeeId: number }>(
+        `http://localhost:3000/api/employees/by-matricule/${formData.num_matricule}`
+      );
+      const id_employee = res.data.employeeId;
+
+      if (!id_employee) {
+        toast.error("Numéro matricule invalide.");
+        return;
+      }
+
+      const newUser: User = {
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        id_employee,
+      };
+
+      await registerUser(newUser, formData.password);
+
+      toast.success("Compte créé avec succès !");
+      setFormData({ username: "", email: "", password: "", num_matricule: "",role: "employe" });
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response) {
+        toast.error(err.response.data?.message || "Erreur lors de l'inscription.");
+      } else if (err instanceof Error) {
+        toast.error(err.message);
+      } else {
+        toast.error("Erreur inconnue");
+      }
+    }
+  };
+
   return (
     <div className="flex flex-col flex-1 w-full overflow-y-auto lg:w-1/2 no-scrollbar">
       <div className="w-full max-w-md mx-auto mb-5 sm:pt-10">
@@ -29,94 +79,97 @@ export default function SignUpForm() {
               Entrez vos informations pour s'inscrire
             </p>
           </div>
-          <div>
-            <div className="relative py-3 sm:py-5">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200 dark:border-gray-800"></div>
+          <form onSubmit={handleSubmit}>
+            <div className="space-y-5">
+              <div>
+                <Label>
+                  Numéro matricule<span className="text-error-500">*</span>
+                </Label>
+                <Input
+                  type="text"
+                  name="num_matricule"
+                  placeholder="Entrez votre numéro matricule"
+                  value={formData.num_matricule}
+                  onChange={handleChange}
+                />
               </div>
-            </div>
-            <form>
-              <div className="space-y-5">
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                  {/* <!-- First Name --> */}
-                  <div className="sm:col-span-1">
-                    <Label>
-                      Nom<span className="text-error-500">*</span>
-                    </Label>
-                    <Input
-                      type="text"
-                      id="fname"
-                      name="fname"
-                      placeholder="Enter your first name"
-                    />
-                  </div>
-                  {/* <!-- Last Name --> */}
-                  <div className="sm:col-span-1">
-                    <Label>
-                      Peénom<span className="text-error-500">*</span>
-                    </Label>
-                    <Input
-                      type="text"
-                      id="lname"
-                      name="lname"
-                      placeholder="Enter your last name"
-                    />
-                  </div>
-                </div>
-                {/* <!-- Email --> */}
-                <div>
-                  <Label>
-                    Email<span className="text-error-500">*</span>
-                  </Label>
+              <div>
+                <Label>
+                  Nom d'utilisateur<span className="text-error-500">*</span>
+                </Label>
+                <Input
+                  type="text"
+                  name="username"
+                  placeholder="Entrez votre nom"
+                  value={formData.username}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <Label>
+                  Email<span className="text-error-500">*</span>
+                </Label>
+                <Input
+                  type="email"
+                  name="email"
+                  placeholder="Entrez votre email"
+                  value={formData.email}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <Label>
+                  Mot de passe<span className="text-error-500">*</span>
+                </Label>
+                <div className="relative">
                   <Input
-                    type="email"
-                    id="email"
-                    name="email"
-                    placeholder="Enter your email"
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    placeholder="Entrez votre mot de passe"
+                    value={formData.password}
+                    onChange={handleChange}
                   />
-                </div>
-                {/* <!-- Password --> */}
-                <div>
-                  <Label>
-                    Mot de passe<span className="text-error-500">*</span>
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      placeholder="Enter your password"
-                      type={showPassword ? "text" : "password"}
-                    />
-                    <span
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2"
-                    >
-                      {showPassword ? (
-                        <EyeIcon className="fill-gray-500 dark:fill-gray-400 size-5" />
-                      ) : (
-                        <EyeCloseIcon className="fill-gray-500 dark:fill-gray-400 size-5" />
-                      )}
-                    </span>
-                  </div>
-                </div>
-                {/* <!-- Button --> */}
-                <div>
-                  <button className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600">
-                    S'inscrire
-                  </button>
+                  <span
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2"
+                  >
+                    {showPassword ? (
+                      <EyeIcon className="fill-gray-500 dark:fill-gray-400 size-5" />
+                    ) : (
+                      <EyeCloseIcon className="fill-gray-500 dark:fill-gray-400 size-5" />
+                    )}
+                  </span>
                 </div>
               </div>
-            </form>
-
-            <div className="mt-5">
-              <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
-                J'ai déja un compte? {""}
-                <Link
-                  to="/signin"
-                  className="text-brand-500 hover:text-brand-600 dark:text-brand-400"
+              <div>
+                <label htmlFor="role" className="text-gray-800 dark:text-gray-300">Etat civil :</label>
+                <select name="role" value={formData.role} className="h-10 w-full border rounded px-3 dark:text-gray-200 dark:bg-black">
+                  <option value="admin">Admin</option>
+                  <option value="employe">Employe</option>
+                  <option value="rh">RH</option>
+                </select>
+              </div>
+              <div>
+                <button
+                  type="submit"
+                  className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600"
                 >
-                  Se connecter
-                </Link>
-              </p>
+                  S'inscrire
+                </button>
+              </div>
             </div>
+          </form>
+
+          <div className="mt-5">
+            <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
+              J'ai déjà un compte?{" "}
+              <Link
+                to="/signin"
+                className="text-brand-500 hover:text-brand-600 dark:text-brand-400"
+              >
+                Se connecter
+              </Link>
+            </p>
           </div>
         </div>
       </div>
