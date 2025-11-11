@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
-
-// Assume these icons are imported from an icon library
 import {
   CalenderIcon,
   ChevronDownIcon,
@@ -24,7 +22,7 @@ const navItems: NavItem[] = [
   {
     icon: <GridIcon />,
     name: "Tableau de bord",
-    path: "/",
+    path: "/tableau",
   },
   {
     icon: <UserCircleIcon />,
@@ -61,29 +59,31 @@ const AppSidebar: React.FC = () => {
     type: "main" | "others";
     index: number;
   } | null>(null);
-  const [subMenuHeight, setSubMenuHeight] = useState<Record<string, number>>(
-    {}
-  );
+  const [subMenuHeight, setSubMenuHeight] = useState<Record<string, number>>({});
   const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  // const isActive = (path: string) => location.pathname === path;
   const isActive = useCallback(
     (path: string) => location.pathname === path,
     [location.pathname]
   );
 
+  // Récupérer le rôle depuis le localStorage
+  const role = localStorage.getItem("role");
+
+  // Si l'utilisateur est un employé, ne montrer que "Absence"
+  const filteredNavItems = role === "employe"
+    ? navItems.filter(item => item.name === "Absence")
+    : navItems;
+
   useEffect(() => {
     let submenuMatched = false;
     ["main", "others"].forEach((menuType) => {
-      const items = menuType === "main" ? navItems : othersItems;
+      const items = menuType === "main" ? filteredNavItems : othersItems;
       items.forEach((nav, index) => {
         if (nav.subItems) {
           nav.subItems.forEach((subItem) => {
             if (isActive(subItem.path)) {
-              setOpenSubmenu({
-                type: menuType as "main" | "others",
-                index,
-              });
+              setOpenSubmenu({ type: menuType as "main" | "others", index });
               submenuMatched = true;
             }
           });
@@ -91,10 +91,8 @@ const AppSidebar: React.FC = () => {
       });
     });
 
-    if (!submenuMatched) {
-      setOpenSubmenu(null);
-    }
-  }, [location, isActive]);
+    if (!submenuMatched) setOpenSubmenu(null);
+  }, [location, isActive, filteredNavItems]);
 
   useEffect(() => {
     if (openSubmenu !== null) {
@@ -114,9 +112,7 @@ const AppSidebar: React.FC = () => {
         prevOpenSubmenu &&
         prevOpenSubmenu.type === menuType &&
         prevOpenSubmenu.index === index
-      ) {
-        return null;
-      }
+      ) return null;
       return { type: menuType, index };
     });
   };
@@ -133,9 +129,7 @@ const AppSidebar: React.FC = () => {
                   ? "menu-item-active"
                   : "menu-item-inactive"
               } cursor-pointer ${
-                !isExpanded && !isHovered
-                  ? "lg:justify-center"
-                  : "lg:justify-start"
+                !isExpanded && !isHovered ? "lg:justify-center" : "lg:justify-start"
               }`}
             >
               <span
@@ -153,8 +147,7 @@ const AppSidebar: React.FC = () => {
               {(isExpanded || isHovered || isMobileOpen) && (
                 <ChevronDownIcon
                   className={`ml-auto w-5 h-5 transition-transform duration-200 ${
-                    openSubmenu?.type === menuType &&
-                    openSubmenu?.index === index
+                    openSubmenu?.type === menuType && openSubmenu?.index === index
                       ? "rotate-180 text-brand-500"
                       : ""
                   }`}
@@ -267,20 +260,20 @@ const AppSidebar: React.FC = () => {
         <Link to="/" className="flex items-center space-x-2 px-2">
           {isExpanded || isHovered || isMobileOpen ? (
             <>
-                <img
-                  className="dark:hidden object-cover"
-                  src="/images/logo/logo_fmbm-dark.png"
-                  alt="Logo"
-                  width={84}
-                  height={84}
-                />
-                <img
-                  className="hidden dark:block object-cover"
-                  src="/images/logo/logo_fmbm.png"
-                  alt="Logo"
-                  width={84}
-                  height={84}
-                />
+              <img
+                className="dark:hidden object-cover"
+                src="/images/logo/logo_fmbm-dark.png"
+                alt="Logo"
+                width={84}
+                height={84}
+              />
+              <img
+                className="hidden dark:block object-cover"
+                src="/images/logo/logo_fmbm.png"
+                alt="Logo"
+                width={84}
+                height={84}
+              />
               <h1 className="dark:hidden text-2xl text-gray-700 font-semibold">FMBM</h1>
               <h1 className="hidden dark:block text-2xl text-gray-100 font-semibold">FMBM</h1>
             </>
@@ -300,32 +293,20 @@ const AppSidebar: React.FC = () => {
             <div>
               <h2
                 className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
-                  !isExpanded && !isHovered
-                    ? "lg:justify-center"
-                    : "justify-start"
+                  !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
                 }`}
               >
-                {isExpanded || isHovered || isMobileOpen ? (
-                  ""
-                ) : (
-                  <HorizontaLDots className="size-6" />
-                )}
+                {isExpanded || isHovered || isMobileOpen ? "" : <HorizontaLDots className="size-6" />}
               </h2>
-              {renderMenuItems(navItems, "main")}
+              {renderMenuItems(filteredNavItems, "main")}
             </div>
             <div className="">
               <h2
                 className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
-                  !isExpanded && !isHovered
-                    ? "lg:justify-center"
-                    : "justify-start"
+                  !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
                 }`}
               >
-                {isExpanded || isHovered || isMobileOpen ? (
-                  ""
-                ) : (
-                  <HorizontaLDots />
-                )}
+                {isExpanded || isHovered || isMobileOpen ? "" : <HorizontaLDots />}
               </h2>
               {renderMenuItems(othersItems, "others")}
             </div>

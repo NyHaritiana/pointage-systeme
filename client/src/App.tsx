@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router";
 import SignIn from "./pages/AuthPages/SignIn";
 import SignUp from "./pages/AuthPages/SignUp";
 import UserProfiles from "./pages/UserProfiles";
@@ -21,11 +21,13 @@ export default function App() {
       <Router>
         <ScrollToTop />
         <Routes>
+          {/* Rediriger la racine vers signin */}
+          <Route path="/" element={<Navigate to="/signin" replace />} />
+
           {/* Dashboard Layout */}
           <Route element={<AppLayout />}>
-            <Route index path="/" element={<Home />} />
-
             {/* Others Page */}
+            <Route path="/tableau" element={<Home />} />
             <Route path="/profile" element={<UserProfiles />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/blanktwo" element={<Blanktwo />} />
@@ -40,15 +42,13 @@ export default function App() {
             {/* Tables department */}
             <Route path="/department-tables" element={<DepartmentTables />} />
 
-            {/* Tables department */}
+            {/* Historique */}
             <Route path="/historique-tables" element={<HistoriqueTables />} />
-
           </Route>
 
           {/* Auth Layout */}
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
-
         </Routes>
       </Router>
       <ToastContainer position="bottom-right" autoClose={3000} theme="colored" />

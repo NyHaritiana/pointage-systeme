@@ -34,9 +34,13 @@ export default function SignInForm() {
     try {
       const res = await loginUser(formData.email, formData.password);
       toast.success("Connexion réussie !");
+
       localStorage.setItem("token", res.token);
       localStorage.setItem("user", JSON.stringify(res.user));
-      navigate("/");
+
+      const role = localStorage.getItem("role");
+      if (role === "employe") navigate("/calendar");
+      else navigate("/");
     }  catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response) {
         toast.error(err.response.data?.message || "Erreur lors de l'inscription.");

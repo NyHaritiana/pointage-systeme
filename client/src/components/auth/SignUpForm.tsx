@@ -14,10 +14,10 @@ export default function SignUpForm() {
     email: "",
     password: "",
     num_matricule: "",
-    role: "employe",
+    role: "employe", // valeur par défaut
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -41,12 +41,13 @@ export default function SignUpForm() {
         email: formData.email,
         password: formData.password,
         id_employee,
+        role: formData.role as "employe" | "rh" | "admin",
       };
 
       await registerUser(newUser, formData.password);
 
       toast.success("Compte créé avec succès !");
-      setFormData({ username: "", email: "", password: "", num_matricule: "",role: "employe" });
+      setFormData({ username: "", email: "", password: "", num_matricule: "", role: "employe" });
     } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response) {
         toast.error(err.response.data?.message || "Erreur lors de l'inscription.");
@@ -142,8 +143,13 @@ export default function SignUpForm() {
                 </div>
               </div>
               <div>
-                <label htmlFor="role" className="text-gray-800 dark:text-gray-300">Etat civil :</label>
-                <select name="role" value={formData.role} className="h-10 w-full border rounded px-3 dark:text-gray-200 dark:bg-black">
+                <label htmlFor="role" className="text-gray-800 dark:text-gray-300">Role :</label>
+                <select
+                  name="role"
+                  value={formData.role}
+                  onChange={handleChange} // <-- important
+                  className="h-10 w-full border rounded px-3 dark:text-gray-200 dark:bg-black"
+                >
                   <option value="admin">Admin</option>
                   <option value="employe">Employe</option>
                   <option value="rh">RH</option>

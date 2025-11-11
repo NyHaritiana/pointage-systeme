@@ -45,12 +45,17 @@ export const loginUser = async (
 
     localStorage.setItem("token", res.data.token);
 
+    if (res.data.user.role) {
+      localStorage.setItem("role", res.data.user.role);
+    }
+
     return res.data;
   } catch (error: unknown) {
-    console.error("Erreur lors du chargement du connexion :", error);
+    console.error("Erreur lors du chargement de la connexion :", error);
     throw error;
   }
 };
+
 
 
 export const logoutUser = () => {
