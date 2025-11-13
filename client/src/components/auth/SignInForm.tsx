@@ -12,17 +12,20 @@ import { loginUser } from "../../api/authApi";
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
-  
+
   const navigate = useNavigate();
 
+  // 🧠 Gestion du changement des champs
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // 🚀 Soumission du formulaire
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -31,24 +34,53 @@ export default function SignInForm() {
       return;
     }
 
+    setLoading(true);
+
     try {
       const res = await loginUser(formData.email, formData.password);
+
+      // 🧠 Vérifions les données renvoyées
+      console.log("Utilisateur connecté :", res.user);
+      console.log("Rôle détecté :", res.user?.role);
+
+      if (!res.user || !res.token) {
+        toast.error("Données de connexion invalides !");
+        return;
+      }
+
       toast.success("Connexion réussie !");
 
+      // 💾 Stockage local
       localStorage.setItem("token", res.token);
       localStorage.setItem("user", JSON.stringify(res.user));
 
-      const role = localStorage.getItem("role");
-      if (role === "employe") navigate("/calendar");
-      else navigate("/");
-    }  catch (err: unknown) {
+      // 🧩 Gestion du rôle (en minuscules)
+      const role = (res.user.role || "employe").toLowerCase();
+      localStorage.setItem("role", role);
+
+      // 🔁 Redirection selon le rôle
+      switch (role) {
+        case "admin":
+        case "rh":
+          navigate("/tableau");
+          break;
+        case "employe":
+          navigate("/calendar");
+          break;
+        default:
+          navigate("/signin");
+          break;
+      }
+    } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response) {
-        toast.error(err.response.data?.message || "Erreur lors de l'inscription.");
+        toast.error(err.response.data?.message || "Erreur lors de la connexion.");
       } else if (err instanceof Error) {
         toast.error(err.message);
       } else {
         toast.error("Erreur inconnue");
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -63,6 +95,7 @@ export default function SignInForm() {
           retour
         </Link>
       </div>
+
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
         <div>
           <div className="mb-5 sm:mb-8">
@@ -70,85 +103,82 @@ export default function SignInForm() {
               Se connecter
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Entrez votre email et le mot de passe pour se connecter
+              Entrez votre email et votre mot de passe pour vous connecter
             </p>
           </div>
-          <div>
-            <div className="relative py-3 sm:py-5">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200 dark:border-gray-800"></div>
-              </div>
-            </div>
-            <form onSubmit={handleSubmit}>
-              <div className="space-y-6">
-                <div>
-                  <Label>
-                    Email <span className="text-error-500">*</span>{" "}
-                  </Label>
-                  <Input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="exemple@gmail.com"
-                  />
-                </div>
-                <div>
-                  <Label>
-                    Mot de passe <span className="text-error-500">*</span>{" "}
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      type={showPassword ? "text" : "password"}
-                      name="password"
-                      value={formData.password}
-                      onChange={handleChange}
-                      placeholder="Entrez votre mot de passe"
-                    />
-                    <span
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2"
-                    >
-                      {showPassword ? (
-                        <EyeIcon className="fill-gray-500 dark:fill-gray-400 size-5" />
-                      ) : (
-                        <EyeCloseIcon className="fill-gray-500 dark:fill-gray-400 size-5" />
-                      )}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Checkbox checked={isChecked} onChange={setIsChecked} />
-                    <span className="block font-normal text-gray-700 text-theme-sm dark:text-gray-400">
-                      me souvenir
-                    </span>
-                  </div>
-                  <Link
-                    to="/reset-password"
-                    className="text-sm text-brand-500 hover:text-brand-600 dark:text-brand-400"
-                  >
-                    Mot de passe oublié?
-                  </Link>
-                </div>
-                <div>
-                  <Button className="w-full" size="sm">
-                    Se connecter
-                  </Button>
-                </div>
-              </div>
-            </form>
 
-            <div className="mt-5">
-              <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
+          <form onSubmit={handleSubmit}>
+            <div className="space-y-6">
+              <div>
+                <Label>
+                  Email <span className="text-error-500">*</span>
+                </Label>
+                <Input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="exemple@gmail.com"
+                />
+              </div>
+
+              <div>
+                <Label>
+                  Mot de passe <span className="text-error-500">*</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="Entrez votre mot de passe"
+                  />
+                  <span
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2"
+                  >
+                    {showPassword ? (
+                      <EyeIcon className="fill-gray-500 dark:fill-gray-400 size-5" />
+                    ) : (
+                      <EyeCloseIcon className="fill-gray-500 dark:fill-gray-400 size-5" />
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Checkbox checked={isChecked} onChange={setIsChecked} />
+                  <span className="block font-normal text-gray-700 text-theme-sm dark:text-gray-400">
+                    Me souvenir
+                  </span>
+                </div>
                 <Link
-                  to="/signup"
-                  className="text-brand-500 hover:text-brand-600 dark:text-brand-400"
+                  to="/reset-password"
+                  className="text-sm text-brand-500 hover:text-brand-600 dark:text-brand-400"
                 >
-                  S'inscrire
+                  Mot de passe oublié ?
                 </Link>
-              </p>
+              </div>
+
+              <div>
+                <Button className="w-full" size="sm" disabled={loading}>
+                  {loading ? "Connexion..." : "Se connecter"}
+                </Button>
+              </div>
             </div>
+          </form>
+
+          <div className="mt-5">
+            <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
+              <Link
+                to="/signup"
+                className="text-brand-500 hover:text-brand-600 dark:text-brand-400"
+              >
+                S'inscrire
+              </Link>
+            </p>
           </div>
         </div>
       </div>
