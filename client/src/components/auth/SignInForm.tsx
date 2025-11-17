@@ -20,12 +20,10 @@ export default function SignInForm() {
 
   const navigate = useNavigate();
 
-  // 🧠 Gestion du changement des champs
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // 🚀 Soumission du formulaire
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -39,7 +37,6 @@ export default function SignInForm() {
     try {
       const res = await loginUser(formData.email, formData.password);
 
-      // 🧠 Vérifions les données renvoyées
       console.log("Utilisateur connecté :", res.user);
       console.log("Rôle détecté :", res.user?.role);
 
@@ -50,15 +47,12 @@ export default function SignInForm() {
 
       toast.success("Connexion réussie !");
 
-      // 💾 Stockage local
       localStorage.setItem("token", res.token);
       localStorage.setItem("user", JSON.stringify(res.user));
 
-      // 🧩 Gestion du rôle (en minuscules)
       const role = (res.user.role || "employe").toLowerCase();
       localStorage.setItem("role", role);
 
-      // 🔁 Redirection selon le rôle
       switch (role) {
         case "admin":
         case "rh":

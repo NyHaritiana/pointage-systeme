@@ -7,6 +7,7 @@ import BasicTables from "./pages/Tables/BasicTables";
 import DepartmentTables from "./pages/Tables/DepartmentTables";
 import FormElements from "./pages/Forms/FormElements";
 import Blanktwo from "./pages/Blanktwo";
+import Forbidden from "./pages/Forbidden";
 import Horaire from "./pages/Horaire";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
@@ -14,6 +15,8 @@ import Home from "./pages/Dashboard/Home";
 import HistoriqueTables from "./pages/Tables/HistoriqueTables";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 export default function App() {
   return (
@@ -24,25 +27,49 @@ export default function App() {
           {/* Rediriger la racine vers signin */}
           <Route path="/" element={<Navigate to="/signin" replace />} />
 
+          <Route path="/forbidden" element={<Forbidden />} />
+
           {/* Dashboard Layout */}
           <Route element={<AppLayout />}>
-            {/* Others Page */}
-            <Route path="/tableau" element={<Home />} />
+            {/* Routes protégées pour admin/rh */}
+            <Route
+              path="/tableau"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "rh"]}>
+                  <Home />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/basic-tables"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "rh"]}>
+                  <BasicTables />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/department-tables"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "rh"]}>
+                  <DepartmentTables />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/horaire"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "rh"]}>
+                  <Horaire />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Autres pages accessibles par tous */}
             <Route path="/profile" element={<UserProfiles />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/blanktwo" element={<Blanktwo />} />
-            <Route path="/horaire" element={<Horaire />} />
-
-            {/* Forms */}
             <Route path="/form-elements" element={<FormElements />} />
-
-            {/* Tables base */}
-            <Route path="/basic-tables" element={<BasicTables />} />
-
-            {/* Tables department */}
-            <Route path="/department-tables" element={<DepartmentTables />} />
-
-            {/* Historique */}
             <Route path="/historique-tables" element={<HistoriqueTables />} />
           </Route>
 
@@ -55,3 +82,4 @@ export default function App() {
     </>
   );
 }
+
