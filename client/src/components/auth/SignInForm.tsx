@@ -7,8 +7,9 @@ import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Checkbox from "../form/input/Checkbox";
 import Button from "../ui/button/Button";
-import { loginUser } from "../../api/authApi";
 
+import { loginUser } from "../../api/authApi";
+import { enregistrerArrivee } from "../../api/pointageApi";
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
@@ -45,14 +46,29 @@ export default function SignInForm() {
         return;
       }
 
+      console.log("[LOGIN] User trouvé :", {
+        id_user: res.user.id_user,
+        id_employee: res.user.employee?.id_employee,
+        role: res.user.role,
+      });
+
+      if (res.user.employee?.id_employee) {
+        await enregistrerArrivee(res.user.employee.id_employee);
+        console.log("Pointage enregistré !");
+      } else {
+        console.warn("Aucun employee.id_employee reçu !");
+      }
+
       toast.success("Connexion réussie !");
 
+      // Sauvegardes
       localStorage.setItem("token", res.token);
       localStorage.setItem("user", JSON.stringify(res.user));
 
       const role = (res.user.role || "employe").toLowerCase();
       localStorage.setItem("role", role);
 
+      // Redirection selon le rôle
       switch (role) {
         case "admin":
         case "rh":

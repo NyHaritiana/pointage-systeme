@@ -1,8 +1,8 @@
 import ComponentCard from "../../components/common/ComponentCard";
 import PageMeta from "../../components/common/PageMeta";
-import HistoriqueTableOne from "../../components/tables/BasicTables/HistoriqueTableOne";
+import DemandeTableOne from "../../components/tables/BasicTables/DemandeTableOne";
 
-export default function HistoriqueTables() {
+export default function DemandeTable() {
   return (
     <>
       <PageMeta
@@ -10,8 +10,8 @@ export default function HistoriqueTables() {
         description="This is React.js Basic Tables Dashboard page for TailAdmin - React.js Tailwind CSS Admin Dashboard Template"
       />
       <div className="space-y-6">
-        <ComponentCard title="Historique des absences">
-          <HistoriqueTableOne />
+        <ComponentCard title="Demande de congé">
+          <DemandeTableOne />
         </ComponentCard>
       </div>
     </>

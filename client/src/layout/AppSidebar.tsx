@@ -8,6 +8,8 @@ import {
   BoxIconLine,
   UserCircleIcon,
   TimeIcon,
+  TaskIcon,
+  CheckLineIcon, 
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
 
@@ -52,6 +54,18 @@ const navItems: NavItem[] = [
     icon: <TimeIcon />,
     path: "/horaire",
     allowedRoles: ["admin", "rh"],
+  }, 
+  {
+    name: "Demande",
+    icon: <TaskIcon />,
+    path: "/demande",
+    allowedRoles: ["admin", "rh"],
+  }, 
+  {
+    name: "Pointage",
+    icon: <CheckLineIcon />,
+    path: "/pointage",
+    allowedRoles: ["admin", "rh"],
   },
   {
     name: "Absence",
@@ -63,7 +77,7 @@ const navItems: NavItem[] = [
         allowedRoles: ["admin", "rh", "employe"],
       },
       {
-        name: "Demande et Historique",
+        name: "Historique",
         path: "/historique-tables",
         allowedRoles: ["admin", "rh", "employe"],
       },

@@ -27,7 +27,7 @@ const Absence = sequelize.define('Absence', {
     allowNull: false,
   },
   type_absence: {
-    type: DataTypes.ENUM('Conge', 'Maladie', 'Exceptionnelle', 'Non justifiee'),
+    type: DataTypes.ENUM('Conge Paye', 'Arret Maladie', 'Permission', 'Conge de Maternite', 'Conge de Paternite', 'Assistance Maternelle', 'Conge Formation', 'Mission'),
     allowNull: false,
   },
   motif: {

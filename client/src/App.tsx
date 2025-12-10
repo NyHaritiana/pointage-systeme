@@ -13,6 +13,8 @@ import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
 import HistoriqueTables from "./pages/Tables/HistoriqueTables";
+import DemandeTable from "./pages/Tables/DemandeTable";
+import PointageTable from "./pages/Tables/PointageTable";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -64,6 +66,14 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/pointage"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "rh"]}>
+                  <PointageTable />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Autres pages accessibles par tous */}
             <Route path="/profile" element={<UserProfiles />} />
@@ -71,6 +81,7 @@ export default function App() {
             <Route path="/blanktwo" element={<Blanktwo />} />
             <Route path="/form-elements" element={<FormElements />} />
             <Route path="/historique-tables" element={<HistoriqueTables />} />
+            <Route path="/demande" element={<DemandeTable />} />
           </Route>
 
           {/* Auth Layout */}

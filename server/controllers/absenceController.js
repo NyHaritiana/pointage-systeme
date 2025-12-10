@@ -30,6 +30,23 @@ const getAbsenceById = async (req, res) => {
   }
 };
 
+const getAbsencesByEmployee = async (req, res) => {
+  try {
+    const id_employee = req.params.id_employee; 
+
+    const absences = await Absence.findAll({
+      where: { id_employee },
+      order: [["date_debut", "DESC"]],
+    });
+
+    res.json(absences);
+  } catch (error) {
+    console.error("Erreur récupération absences :", error);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+};
+
+
 const updateAbsence = async (req, res) => {
   try {
     const [updated] = await Absence.update(req.body, {
@@ -62,6 +79,7 @@ module.exports = {
   createAbsence,
   getAbsences,
   getAbsenceById,
+  getAbsencesByEmployee,
   updateAbsence,
   deleteAbsence
 };

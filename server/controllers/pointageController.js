@@ -1,4 +1,7 @@
-const Pointage = require("../models/Pointage.js")
+const Pointage = require("../models/Pointage.js");
+const Employee = require('../models/Employee.js');
+const { Op } = require("sequelize");
+
 
 const createPointage = async (req, res) => {
   try {
@@ -36,7 +39,9 @@ const updatePointage = async (req, res) => {
       where: { id_pointage: req.params.id_pointage },
     });
     if (updated) {
-      const pointage = await Pointage.findOne({ where: { id_pointage: req.params.id_pointage } });
+      const pointage = await Pointage.findOne({
+        where: { id_pointage: req.params.id_pointage },
+      });
       res.json(pointage);
     } else {
       res.status(404).json({ message: "Pointage introuvable" });
@@ -57,6 +62,8 @@ const deletePointage = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+
 
 module.exports = {
   createPointage,

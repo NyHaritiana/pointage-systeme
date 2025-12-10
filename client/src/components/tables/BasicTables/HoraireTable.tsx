@@ -7,17 +7,36 @@ import {
 } from "../../ui/table";
 import { FiEdit, FiTrash2 } from "react-icons/fi";
 import { Horaire } from "../../../api/horaireApi";
+import { useState } from "react";
 
 interface HoraireTableProps {
   horaires: Horaire[];
   onEdit: (horaire: Horaire) => void;
   onDelete: (id: number) => void;
 }
+
 export default function HoraireTable({
   horaires,
   onEdit,
   onDelete,
 }: HoraireTableProps) {
+
+  const itemsPerPage = 4;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const totalPages = Math.ceil(horaires.length / itemsPerPage);
+
+  const currentData = horaires.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const changePage = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
       <div className="max-w-full overflow-x-auto">
@@ -54,7 +73,7 @@ export default function HoraireTable({
 
           {/* Table Body */}
           <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-            {horaires.map((h) => (
+            {currentData.map((h) => (
               <TableRow key={h.id_horaire}>
                 <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                   {h.semaine}
@@ -67,7 +86,7 @@ export default function HoraireTable({
                 </TableCell>
                 <TableCell className="px-4 py-3 flex justify-center gap-3">
                   <button
-                  onClick={() => onEdit(h)}
+                    onClick={() => onEdit(h)}
                     className="text-blue-500 hover:text-blue-700 transition"
                     title="Modifier"
                   >
@@ -75,11 +94,15 @@ export default function HoraireTable({
                   </button>
 
                   <button
-                  onClick={() => {
-                        if (window.confirm("Voulez-vous vraiment supprimer cet département ?")) {
-                          onDelete(h.id_horaire);
-                        }
-                      }}
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          "Voulez-vous vraiment supprimer cet horaire ?"
+                        )
+                      ) {
+                        onDelete(h.id_horaire);
+                      }
+                    }}
                     className="text-red-500 hover:text-red-700 transition"
                     title="Supprimer"
                   >
@@ -90,6 +113,28 @@ export default function HoraireTable({
             ))}
           </TableBody>
         </Table>
+      </div>
+
+      <div className="flex justify-center items-center gap-3 py-4">
+        <button
+          onClick={() => changePage(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="px-3 py-1 border rounded-lg disabled:opacity-40 dark:border-white/20"
+        >
+          Précédent
+        </button>
+
+        <span className="text-gray-600 dark:text-gray-300">
+          Page {currentPage} / {totalPages}
+        </span>
+
+        <button
+          onClick={() => changePage(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="px-3 py-1 border rounded-lg disabled:opacity-40 dark:border-white/20"
+        >
+          Suivant
+        </button>
       </div>
     </div>
   );

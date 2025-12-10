@@ -2,13 +2,24 @@ import axios from "axios";
 
 const API_URL = "http://localhost:3000/api/users";
 
+// ➤ Interface Employee
+export interface Employee {
+  id_employee: number;
+  nom?: string;
+  prenom?: string;
+  // Ajoute d'autres champs si besoin
+}
+
+// ➤ Interface User corrigée
 export interface User {
   id_user?: number;
   username: string;
   email: string;
   role?: "admin" | "employe" | "rh";
-  id_employee: number;
   password: string;
+
+  // IMPORTANT !!
+  employee?: Employee | null;
 }
 
 export interface LoginResponse {
@@ -32,7 +43,6 @@ export const registerUser = async (
   }
 };
 
-
 export const loginUser = async (
   email: string,
   password: string
@@ -55,8 +65,6 @@ export const loginUser = async (
     throw error;
   }
 };
-
-
 
 export const logoutUser = () => {
   localStorage.removeItem("token");

@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import PageMeta from "../../components/common/PageMeta";
 import BasicTableOne from "../../components/tables/BasicTables/BasicTableOne";
 import { useModal } from "../../hooks/useModal";
@@ -6,6 +8,7 @@ import { Modal } from "../../components/ui/modal";
 import { toast } from "react-toastify";
 import { getEmployees, addEmployee, deleteEmployee, editEmployee, Employee } from "../../api/employeeApi";
 import { getDepartments, Department } from "../../api/departmentApi";
+import logo from "/images/logo/logo_fmbm-dark.png";
 
 
 export default function BasicTables() {
@@ -73,11 +76,6 @@ const fetchDepartments = async () => {
   const nextEditStep = () => setEditStep((prev) => Math.min(prev + 1, 3));
   const prevEditStep = () => setEditStep((prev) => Math.max(prev - 1, 1));
 
-
-  // Charger les employés
-  useEffect(() => {
-    fetchEmployees();
-  }, []);
 
   const fetchEmployees = async () => {
     try {
@@ -159,6 +157,103 @@ const handleUpdate = async () => {
 };
 
 
+const handlePdf = (emp: Employee) => {
+  const dep =
+    departments.find((d) => d.id_departement === emp.id_departement)?.sigle ||
+    "-";
+
+  const doc = new jsPDF();
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  doc.addImage(logo, "PNG", pageWidth / 2 - 15, 10, 30, 30);
+
+
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text("FIKAMBANAN MAMPIELY BAIBOLY MALAGASY", pageWidth / 2, 48, { align: "center" });
+
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text("Société Biblique Malagasy - Malagasy Bible Society", pageWidth / 2, 55, { align: "center" });
+
+  doc.setFontSize(18);
+  doc.text("FICHE PERSONNEL", pageWidth / 2, 68, { align: "center" });
+
+  const sections = [
+    {
+      title: "Informations personnelles",
+      rows: [
+        ["Nom complet", `${emp.nom || ""} ${emp.prenom || ""}`],
+        ["Email", emp.email || "-"],
+        ["Date de naissance", emp.date_naissance || "-"],
+        ["État civil", emp.etat_civil || "-"],
+        ["Nombre d'enfants", emp.nb_enfant || "-"],
+      ],
+    },
+    {
+      title: "Informations professionnelles",
+      rows: [
+        ["Date embauche", emp.date_embauche || "-"],
+        ["Fonction", emp.fonction || "-"],
+        ["Projet", emp.projet || "-"],
+        ["Département", dep],
+        ["Contrat", emp.contrat || "-"],
+        ["Statut", emp.statut || "-"],
+      ],
+    },
+    {
+      title: "Localisation & Contact",
+      rows: [
+        ["Téléphone", emp.telephone || "-"],
+        ["Adresse", emp.adresse || "-"],
+        ["Localité", emp.localite || "-"],
+      ],
+    },
+    {
+      title: "Identifiants de travail",
+      rows: [
+        ["Matricule", emp.num_matricule || "-"],
+        ["Num CNAPS", emp.num_cnaps || "-"],
+        ["Catégorie", emp.categorie || "-"],
+        ["Groupe", emp.groupe || "-"],
+        ["Salaire", emp.salaire ? emp.salaire + " Ar" : "-"],
+      ],
+    },
+  ];
+
+  let currentY = 75;
+
+  sections.forEach((section) => {
+    // Titre du groupe
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text(section.title, 14, currentY);
+
+    // Tableau
+    autoTable(doc, {
+      startY: currentY + 3,
+      head: [["Information", "Valeur"]],
+      body: section.rows,
+      theme: "grid",
+      headStyles: {
+        fillColor: [200, 200, 200],
+        textColor: 0,
+        fontSize: 11,
+      },
+      styles: {
+        fontSize: 10,
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    currentY = doc.lastAutoTable.finalY + 10;
+  });
+
+  doc.save(`Employe_${emp.nom}.pdf`);
+};
+
+
+
   return (
     <>
       <PageMeta title="pointage-systeme | FMBM" description="liste des employés et ajout" />
@@ -168,7 +263,7 @@ const handleUpdate = async () => {
           <button onClick={openModal} className="bg-blue-500 text-white px-2 rounded">Nouveau</button>
         </div>
 
-        <BasicTableOne employees={employees} departments={departments} onDelete={handleDelete} onEdit={handleEdit} />
+        <BasicTableOne employees={employees} departments={departments} onDelete={handleDelete} onEdit={handleEdit} onPdf={handlePdf} />
       </div>
 
       <Modal isOpen={isOpen} onClose={closeModal} className="max-w-[600px] p-6 lg:p-10">
