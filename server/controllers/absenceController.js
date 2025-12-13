@@ -1,4 +1,5 @@
 const Absence = require("../models/Absence.js")
+const Employee = require("../models/Employee.js");
 
 const createAbsence = async (req, res) => {
   try {
@@ -11,7 +12,14 @@ const createAbsence = async (req, res) => {
 
 const getAbsences = async (req, res) => {
   try {
-    const absences = await Absence.findAll();
+    const absences = await Absence.findAll({
+    include: [
+      {
+        model: Employee,
+        attributes: ["prenom", "nom"]
+      }
+    ]
+  });
     res.json(absences);
   } catch (error) {
     res.status(500).json({ message: error.message });

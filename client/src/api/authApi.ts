@@ -17,7 +17,7 @@ export interface User {
   email: string;
   role?: "admin" | "employe" | "rh";
   password: string;
-
+  id_employee?: number;
   // IMPORTANT !!
   employee?: Employee | null;
 }

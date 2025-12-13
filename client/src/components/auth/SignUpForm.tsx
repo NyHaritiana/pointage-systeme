@@ -152,7 +152,7 @@ export default function SignUpForm() {
                 >
                   <option value="admin">Admin</option>
                   <option value="employe">Employe</option>
-                  <option value="rh">RH</option>
+                  <option value="rh">Responsable</option>
                 </select>
               </div>
               <div>

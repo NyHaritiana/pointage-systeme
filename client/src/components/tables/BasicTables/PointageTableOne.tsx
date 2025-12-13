@@ -26,35 +26,53 @@ export default function PointageTableOne() {
     new Date(dateStr).toLocaleDateString("fr-FR");
 
   const formatTime = (timeStr: string) =>
-    timeStr ? timeStr.slice(0, 5) : "-"; // Exemple : "08:30:00" → "08:30"
+    timeStr ? timeStr.slice(0, 5) : "-";
 
-  // Calcul de la semaine actuelle
-  const currentWeek = (() => {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), 0, 1);
-    const diff = ((now.getTime() - start.getTime()) / 86400000) + start.getDay();
-    return Math.ceil(diff / 7);
-  })();
-
-  // Récupère l'horaire correspondant à la semaine actuelle
-  const horaireSemaine = horaires.find(
-    (h) => Number(h.semaine) === currentWeek
-  );
-
-  // Déterminer le statut du pointage en fonction de l'horaire
+  /**
+   * 🔥 Fonction statut CORRIGÉE (vraie logique)
+   * - Trouve l'horaire dont la "semaine" (date) est la plus proche
+   *   mais inférieure ou égale à la date du pointage.
+   */
   const getStatut = (p: Pointage) => {
-    if (!horaireSemaine) return "Absent";
     if (!p.heure_arrivee) return "Absent";
 
-    const [hArrivee, mArrivee] = p.heure_arrivee.split(":").map(Number);
-    const [hDebut, mDebut] = horaireSemaine.heure_entree.split(":").map(Number);
+    const datePointage = new Date(p.date_pointage);
 
-    if (hArrivee < hDebut || (hArrivee === hDebut && mArrivee <= mDebut)) {
-      return "Présent";
-    } else {
-      return "Retard";
+    // 1️⃣ Filtrer les horaires dont la semaine <= date du pointage
+    const horairesEligibles = horaires.filter((h) => {
+      const dateSemaine = new Date(h.semaine);
+      return dateSemaine <= datePointage;
+    });
+
+    if (horairesEligibles.length === 0) {
+      return "Absent";
     }
+
+    // 2️⃣ Prendre l'horaire le plus récent
+    const horaire = horairesEligibles.sort(
+      (a, b) => new Date(b.semaine).getTime() - new Date(a.semaine).getTime()
+    )[0];
+
+    // 3️⃣ Comparer l'heure d'arrivée
+    const [hArr, mArr] = p.heure_arrivee.split(":").map(Number);
+    const [hDeb, mDeb] = horaire.heure_entree.split(":").map(Number);
+
+    const arrivee = hArr * 60 + mArr;
+    const debut = hDeb * 60 + mDeb;
+
+    if (arrivee <= debut) return "Présent";
+    return "Retard";
   };
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  const indexOfLast = currentPage * itemsPerPage;
+  const indexOfFirst = indexOfLast - itemsPerPage;
+  const currentItems = pointages.slice(indexOfFirst, indexOfLast);
+
+  const totalPages = Math.ceil(pointages.length / itemsPerPage);
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
@@ -66,7 +84,6 @@ export default function PointageTableOne() {
               <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start">Employé</TableCell>
               <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start">Date</TableCell>
               <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start">Heure d'arrivée</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start">Heure de départ</TableCell>
               <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start">Statut</TableCell>
             </TableRow>
           </TableHeader>
@@ -79,13 +96,16 @@ export default function PointageTableOne() {
                 </td>
               </TableRow>
             ) : (
-              pointages.map((p) => (
+              currentItems.map((p) => (
                 <TableRow key={p.id_pointage}>
                   <TableCell className="px-4 py-3 text-gray-600">{p.id_pointage}</TableCell>
-                  <TableCell className="px-4 py-3 text-gray-600">{p.id_employee}</TableCell>
+                  <TableCell className="px-4 py-3 text-gray-600">
+                    {p.Employee
+                      ? `${p.Employee.prenom}`
+                      : "—"}
+                  </TableCell>
                   <TableCell className="px-4 py-3 text-gray-600">{formatDate(p.date_pointage)}</TableCell>
                   <TableCell className="px-4 py-3 text-gray-600">{formatTime(p.heure_arrivee)}</TableCell>
-                  <TableCell className="px-4 py-3 text-gray-600">{formatTime(p.heure_depart)}</TableCell>
                   <TableCell className="px-4 py-3">
                     <Badge
                       size="sm"
@@ -105,8 +125,30 @@ export default function PointageTableOne() {
             )}
           </TableBody>
         </Table>
+
+        {/* Pagination */}
+        <div className="flex justify-center items-center gap-3 py-4">
+          <button
+            className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+            onClick={() => setCurrentPage((p) => p - 1)}
+            disabled={currentPage === 1}
+          >
+            Précédent
+          </button>
+
+          <span className="text-gray-700">
+            Page {currentPage} / {totalPages}
+          </span>
+
+          <button
+            className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+            onClick={() => setCurrentPage((p) => p + 1)}
+            disabled={currentPage === totalPages}
+          >
+            Suivant
+          </button>
+        </div>
       </div>
     </div>
   );
 }
-  

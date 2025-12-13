@@ -10,8 +10,56 @@ const JWT_SECRET = process.env.JWT_SECRET || 'votre_cle_secrete';
 
 module.exports = {
   async register(req, res) {
-    // Ton code d'inscription...
-  },
+    try {
+      const { username, email, password, id_employee, role } = req.body;
+
+      // Vérifier champs
+      if (!username || !email || !password || !id_employee) {
+        return res.status(400).json({ message: "Champs manquants." });
+      }
+
+      // Vérifier si email existe déjà
+      const existingUser = await User.findOne({ where: { email } });
+      if (existingUser) {
+        return res.status(400).json({ message: "Cet email est déjà utilisé." });
+      }
+
+      // Vérifier si employee existe réellement
+      const employee = await Employee.findByPk(id_employee);
+      if (!employee) {
+        return res.status(400).json({ message: "Employé introuvable." });
+      }
+
+      // Hasher mot de passe
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Créer user
+      const newUser = await User.create({
+        username,
+        email,
+        password: hashedPassword,
+        id_employee,
+        role: role || "employe",
+      });
+
+      // Réponse
+      res.json({
+        message: "Utilisateur créé avec succès.",
+        user: {
+          id_user: newUser.id_user,
+          username: newUser.username,
+          email: newUser.email,
+          role: newUser.role,
+          employee: employee,
+        }
+      });
+
+    } catch (error) {
+      console.error("Erreur register :", error);
+      res.status(500).json({ message: "Erreur lors de l'inscription." });
+    }
+  }
+,
 
   async login(req, res) {
     try {

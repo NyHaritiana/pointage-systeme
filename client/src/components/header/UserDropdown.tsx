@@ -8,20 +8,28 @@ export default function UserDropdown() {
 
   // Pas de any → Record<string, unknown>
   const [user, setUser] = useState<Record<string, unknown> | null>(null);
+  const [role, setRole] = useState<string | null>(null);
   const navigate = useNavigate();
 
   // Charger user depuis localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem("user");
-    if (!stored) return;
+useEffect(() => {
+  const storedUser = localStorage.getItem("user");
+  const storedRole = localStorage.getItem("role");
 
+  if (storedUser) {
     try {
-      setUser(JSON.parse(stored) as Record<string, unknown>);
+      setUser(JSON.parse(storedUser) as Record<string, unknown>);
     } catch (e) {
       console.error("Erreur parsing user", e);
       setUser(null);
     }
-  }, []);
+  }
+
+  if (storedRole) {
+    setRole(storedRole.toLowerCase());
+  }
+}, []);
+
 
   // Sécuriser l’accès aux propriétés
   const nom = typeof user?.username === "string" ? user.username : undefined;
@@ -67,6 +75,15 @@ export default function UserDropdown() {
             </div>
           </DropdownItem>
 
+        {role === "admin" && (
+          <DropdownItem>
+            <Link to="/signup" className="block px-2 py-2">
+              Inscription
+            </Link>
+          </DropdownItem>
+        )}
+
+          
           {/* Profil */}
           <DropdownItem>
             <Link to="/profile" className="block px-2 py-2">

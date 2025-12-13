@@ -87,8 +87,8 @@ export default function MonthlySalesChart() {
   };
   const series = [
     {
-      name: "Sales",
-      data: [168, 385, 201, 298, 187, 195, 291, 110, 215, 390, 280, 112],
+      name: "Absents",
+      data: [5, 12, 2, 9, 7, 9, 1, 11, 5, 3, 8, 2], 
     },
   ];
   const [isOpen, setIsOpen] = useState(false);

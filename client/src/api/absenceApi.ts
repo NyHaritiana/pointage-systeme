@@ -3,6 +3,7 @@ import axios from "axios";
 const API_URL = "http://localhost:3000/api/absences";
 
 export interface Absence {
+  retard: any;
   id_absence: number;
   id_employee: number;
   date_debut: string;
@@ -10,6 +11,10 @@ export interface Absence {
   type_absence: "Conge Paye" | "Arret Maladie" | "Permission" | "Conge de Maternite" | "Conge de Paternite" | "Assistance Maternelle" | "Conge Formation" | "Mission";
   motif: string;
   statut: "En attente" | "Approuve" | "Rejete";
+  Employee?: {
+    prenom: string;
+    nom: string;
+  };
 }
 
 export const getAbsences = async (): Promise<Absence[]> => {

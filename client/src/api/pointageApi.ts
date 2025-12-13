@@ -11,6 +11,10 @@ export interface Pointage {
   heure_arrivee: string;
   heure_depart: string;
   statut: "Présent" | "Absent" | "Retard" | "Permission";
+    Employee?: {
+    prenom: string;
+    nom: string;
+  };
 }
 
 export const enregistrerArrivee = async (id_employee: number) => {

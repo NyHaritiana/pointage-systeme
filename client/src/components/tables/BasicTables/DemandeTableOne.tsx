@@ -8,7 +8,7 @@ export default function DemandeTableOne() {
   const [absences, setAbsences] = useState<Absence[]>([]);
 
   useEffect(() => {
-    const fetchAbsences = async () => {
+    const fetchAbsences = async () => { 
       try {
         const data = await getAbsences();
         setAbsences(data);
@@ -25,10 +25,8 @@ export default function DemandeTableOne() {
 
   const handleStatusChange = async (absence: Absence, newStatus: Absence["statut"]) => {
     try {
-      // Appel API pour mettre à jour le statut
       const updatedAbsence = await editAbsence(absence.id_absence, { statut: newStatus });
       
-      // Mise à jour du state local en temps réel
       setAbsences((prev) =>
         prev.map((a) => (a.id_absence === absence.id_absence ? updatedAbsence : a))
       );
@@ -41,7 +39,6 @@ export default function DemandeTableOne() {
 const [currentPage, setCurrentPage] = useState(1);
 const itemsPerPage = 5;
 
-// Calcul des éléments affichés
 const lastIndex = currentPage * itemsPerPage;
 const firstIndex = lastIndex - itemsPerPage;
 const currentAbsences = absences.slice(firstIndex, lastIndex);
@@ -76,12 +73,16 @@ const totalPages = Math.ceil(absences.length / itemsPerPage);
               currentAbsences.map((absence) => (
                 <TableRow key={absence.id_absence}>
                   <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">{absence.id_absence}</TableCell>
-                  <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">{absence.id_employee}</TableCell>
+                  <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    {absence.Employee
+                      ? `${absence.Employee.prenom}`
+                      : "—"}
+                  </TableCell>
                   <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">{formatDate(absence.date_debut)}</TableCell>
                   <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">{formatDate(absence.date_fin)}</TableCell>
                   <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     <Badge
-                      size="sm"
+                      size="sm" 
                       color={
                         absence.statut === "Approuve"
                           ? "success"

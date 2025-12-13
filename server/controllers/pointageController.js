@@ -14,7 +14,14 @@ const createPointage = async (req, res) => {
 
 const getPointages = async (req, res) => {
   try {
-    const pointages = await Pointage.findAll();
+    const pointages = await Pointage.findAll({
+    include: [
+      {
+        model: Employee,
+        attributes: ["prenom", "nom"]
+      }
+    ]
+  });
     res.json(pointages);
   } catch (error) {
     res.status(500).json({ message: error.message });

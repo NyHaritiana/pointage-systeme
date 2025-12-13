@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const Pointage = require("../models/Pointage.js");
 const { enregistrerArrivee } = require("../services/pointageService");
 const {
   createPointage,
@@ -29,5 +30,32 @@ router.post('/arrivee', async (req, res) => {
     res.status(500).json({ message: "Erreur serveur" });
   }
 });
+router.get("/taux-assiduite", async (req, res) => {
+  try {
+    const moisActuel = new Date().getMonth() + 1; // 1-12
+    const anneeActuelle = new Date().getFullYear();
+
+    const pointages = await Pointage.findAll({
+      where: {
+        [Op.and]: [
+          sequelize.where(fn('MONTH', col('date_pointage')), moisActuel),
+          sequelize.where(fn('YEAR', col('date_pointage')), anneeActuelle)
+        ]
+      }
+    });
+
+    const total = pointages.length;
+    const presents = pointages.filter(p => p.statut === "Présent").length;
+
+    const taux = total === 0 ? 0 : (presents / total) * 100;
+
+    res.json({ taux: taux.toFixed(2) });
+  } catch (err) {
+    console.error("Erreur calcul taux assiduité :", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 
 module.exports = router;
