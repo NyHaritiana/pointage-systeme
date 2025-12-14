@@ -1,8 +1,6 @@
-// pointageApi.ts
 import axios from "axios";
 
 const API_URL = "http://localhost:3000/api/pointages";
-
 
 export interface Pointage {
   id_pointage: number;
@@ -11,16 +9,37 @@ export interface Pointage {
   heure_arrivee: string;
   heure_depart: string;
   statut: "Présent" | "Absent" | "Retard" | "Permission";
-    Employee?: {
+  Employee?: {
     prenom: string;
     nom: string;
   };
 }
 
-export const enregistrerArrivee = async (id_employee: number) => {
-  return axios.post(`${API_URL}/arrivee`, {
-    id_employee,
-  });
+export const enregistrerArrivee = async (id_employee: number): Promise<Pointage> => {
+  try {
+    const res = await axios.post<{ message: string; pointage: Pointage }>(
+      `${API_URL}/arrivee`, 
+      { id_employee }
+    );
+    return res.data.pointage;
+  } catch (error) {
+    console.error("Erreur lors de l'enregistrement de l'arrivée :", error);
+    throw error;
+  }
+};
+
+export const enregistrerDepart = async (id_pointage: number): Promise<Pointage> => {
+  try {
+    // IMPORTANT: On n'envoie PAS l'heure dans le body
+    // Le backend génère l'heure automatiquement
+    const res = await axios.put<{ message: string; pointage: Pointage }>(
+      `${API_URL}/${id_pointage}/depart`
+    );
+    return res.data.pointage;
+  } catch (error) {
+    console.error("Erreur lors de l'enregistrement du départ :", error);
+    throw error;
+  }
 };
 
 export const getPointages = async (): Promise<Pointage[]> => {

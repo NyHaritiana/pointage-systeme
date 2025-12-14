@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Pointage = require("../models/Pointage.js");
-const { enregistrerArrivee } = require("../services/pointageService");
+const { enregistrerArrivee, enregistrerDepart } = require("../services/pointageService");
 const {
   createPointage,
   getPointages,
@@ -15,6 +14,8 @@ router.get('/', getPointages);
 router.get('/:id_pointage', getPointageById);
 router.put('/:id_pointage', updatePointage);
 router.delete('/:id_pointage', deletePointage);
+
+// Route pour enregistrer l'arrivée
 router.post('/arrivee', async (req, res) => {
   try {
     const { id_employee } = req.body;
@@ -27,35 +28,34 @@ router.post('/arrivee', async (req, res) => {
     res.json({ message: "Arrivée enregistrée", pointage: result });
   } catch (err) {
     console.error("Erreur pointage arrivee :", err);
-    res.status(500).json({ message: "Erreur serveur" });
+    res.status(500).json({ message: "Erreur serveur", error: err.message });
   }
 });
-router.get("/taux-assiduite", async (req, res) => {
+
+// Route pour enregistrer le départ - LE BACKEND GÉNÈRE L'HEURE
+router.put('/:id_pointage/depart', async (req, res) => {
   try {
-    const moisActuel = new Date().getMonth() + 1; // 1-12
-    const anneeActuelle = new Date().getFullYear();
+    const { id_pointage } = req.params;
 
-    const pointages = await Pointage.findAll({
-      where: {
-        [Op.and]: [
-          sequelize.where(fn('MONTH', col('date_pointage')), moisActuel),
-          sequelize.where(fn('YEAR', col('date_pointage')), anneeActuelle)
-        ]
-      }
+    if (!id_pointage) {
+      return res.status(400).json({ message: "id_pointage manquant" });
+    }
+
+    // Convertir en nombre
+    const id = parseInt(id_pointage);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "id_pointage invalide" });
+    }
+
+    const result = await enregistrerDepart(id);
+    res.json({ 
+      message: "Départ enregistré", 
+      pointage: result 
     });
-
-    const total = pointages.length;
-    const presents = pointages.filter(p => p.statut === "Présent").length;
-
-    const taux = total === 0 ? 0 : (presents / total) * 100;
-
-    res.json({ taux: taux.toFixed(2) });
   } catch (err) {
-    console.error("Erreur calcul taux assiduité :", err);
-    res.status(500).json({ error: err.message });
+    console.error("Erreur pointage départ :", err);
+    res.status(500).json({ message: "Erreur serveur", error: err.message });
   }
 });
-
-
 
 module.exports = router;
