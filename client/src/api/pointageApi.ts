@@ -15,7 +15,7 @@ export interface Pointage {
   };
 }
 
-export const enregistrerArrivee = async (id_employee: number): Promise<Pointage> => {
+export const enregistrerArrivee = async (id_employee: number, heureActuelle: string, statut: string): Promise<Pointage> => {
   try {
     const res = await axios.post<{ message: string; pointage: Pointage }>(
       `${API_URL}/arrivee`, 

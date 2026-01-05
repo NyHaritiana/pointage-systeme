@@ -88,11 +88,40 @@ const fetchDepartments = async () => {
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    const { name, value } = e.target;
+  e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+) => {
+  const { name, value } = e.target;
+  
+  // Validation pour date_naissance
+  if (name === "date_naissance" && value) {
+    const selectedDate = new Date(value);
+    const maxDate = new Date();
+    maxDate.setFullYear(maxDate.getFullYear() - 18);
+    
+    // Si la date sélectionnée est après la limite, on bloque
+    if (selectedDate > maxDate) {
+      toast.error("L'employé doit avoir au moins 18 ans");
+      return; // Ne pas mettre à jour l'état
+    }
+    
+    // Si la date est valide, mettre à jour normalement
     setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+    return;
+  }
+
+  // Validation pour CIN
+  if (name === "CIN") {
+    // Ne garder que les chiffres
+    const numericValue = value.replace(/\D/g, '');
+    // Limiter à 12 caractères
+    const limitedValue = numericValue.slice(0, 12);
+    setFormData((prev) => ({ ...prev, [name]: limitedValue }));
+    return;
+  }
+
+  // Pour tous les autres champs
+  setFormData((prev) => ({ ...prev, [name]: value }));
+};
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -306,9 +335,29 @@ const handlePdf = (emp: Employee) => {
               <label htmlFor="prenom" className="text-gray-800 dark:text-gray-300">Prenom :</label>
               <input name="prenom" value={formData.prenom} onChange={handleChange} placeholder="Prénom" className="h-10 w-full border rounded px-3 dark:text-gray-200" />
               <label htmlFor="CIN" className="text-gray-800 dark:text-gray-300">N° CIN :</label>
-              <input name="CIN" value={formData.CIN} onChange={handleChange} placeholder="CIN" className="h-10 w-full border rounded px-3 dark:text-gray-200" required />
-              <label htmlFor="date_naissance" className="text-gray-800 dark:text-gray-300">Date de naissance :</label>
-              <input name="date_naissance" type="date" value={formData.date_naissance} onChange={handleChange} className="h-10 w-full border rounded px-3 dark:text-gray-200" required />
+              <input
+                name="CIN"
+                value={formData.CIN}
+                onChange={handleChange}
+                placeholder="CIN"
+                maxLength={12}
+                pattern="[0-9]*"
+                inputMode="numeric"
+                className="h-10 w-full border rounded px-3 dark:text-gray-200"
+                required
+              />
+              <label htmlFor="date_naissance" className="text-gray-800 dark:text-gray-300">
+                Date de naissance :
+              </label>
+              <input
+      name="date_naissance"
+      type="date"
+      value={formData.date_naissance}
+      onChange={handleChange}
+      max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
+      className="h-10 w-full border rounded px-3 dark:text-gray-200"
+      required
+    />
               <label htmlFor="telephone" className="text-gray-800 dark:text-gray-300">Telephone :</label>
               <input name="telephone" value={formData.telephone} onChange={handleChange} placeholder="Téléphone" className="h-10 w-full border rounded px-3 dark:text-gray-200" required />
             </div>

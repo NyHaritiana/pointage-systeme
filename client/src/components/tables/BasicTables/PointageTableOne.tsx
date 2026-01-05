@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../ui/table";
 import Badge from "../../ui/badge/Badge";
-import { Pointage, getPointages, enregistrerArrivee, enregistrerDepart } from "../../../api/pointageApi"; // Ajout de l'import
+import { Pointage, getPointages, enregistrerArrivee, enregistrerDepart } from "../../../api/pointageApi";
 import { Horaire, getHoraires } from "../../../api/horaireApi";
 import { Employee, getEmployees } from "../../../api/employeeApi";
-import { FiLogIn, FiLogOut } from "react-icons/fi";
+import { FiLogIn, FiLogOut, FiClock } from "react-icons/fi";
 
-// Type étendu qui inclut le flag isVirtual
+// Type étendu qui inclut le flag isVirtual et l'heure théorique
 type ExtendedPointage = Pointage & {
   isVirtual?: boolean;
+  heureEntreeTheorique?: string;
 };
 
 export default function PointageTableOne() {
@@ -52,46 +53,100 @@ export default function PointageTableOne() {
     timeStr ? timeStr.slice(0, 5) : "-";
 
   /**
-   * Fonction pour déterminer le statut d'un pointage
+   * Trouve l'horaire applicable pour une date donnée
    */
-  const getStatut = (item: ExtendedPointage) => {
-    // Si c'est une absence virtuelle, retourner "Absent"
-    if (item.isVirtual) {
-      return "Absent";
-    }
-
-    // Si le pointage a déjà un statut défini, l'utiliser
-    if (item.statut) return item.statut;
-
-    // Sinon, calculer le statut basé sur l'horaire
-    if (!item.heure_arrivee) return "Absent";
-
-    const datePointage = new Date(item.date_pointage);
-
-    // Trouver l'horaire applicable
-    const horairesEligibles = horaires.filter((h) => {
-      const dateSemaine = new Date(h.semaine);
-      return dateSemaine <= datePointage;
+  const getHoraireForDate = (datePointage: Date): Horaire | null => {
+    if (horaires.length === 0) return null;
+    
+    const pointageDate = new Date(datePointage);
+    pointageDate.setHours(0, 0, 0, 0);
+    
+    // Filtrer les horaires dont la semaine est <= à la date du pointage
+    const horairesApplicables = horaires.filter(h => {
+      const semaineDate = new Date(h.semaine);
+      semaineDate.setHours(0, 0, 0, 0);
+      return semaineDate <= pointageDate;
     });
 
-    if (horairesEligibles.length === 0) {
-      return "Présent";
+    if (horairesApplicables.length === 0) {
+      return null;
     }
 
-    // Prendre l'horaire le plus récent
-    const horaire = horairesEligibles.sort(
+    // Prendre l'horaire le plus récent (dernière semaine configurée avant la date)
+    const horaire = horairesApplicables.sort(
       (a, b) => new Date(b.semaine).getTime() - new Date(a.semaine).getTime()
     )[0];
 
-    // Comparer l'heure d'arrivée
-    const [hArr, mArr] = item.heure_arrivee.split(":").map(Number);
-    const [hDeb, mDeb] = horaire.heure_entree.split(":").map(Number);
+    return horaire;
+  };
 
-    const arrivee = hArr * 60 + mArr;
-    const debut = hDeb * 60 + mDeb;
+  /**
+ * Calcule le statut et le retard en minutes pour un pointage
+ */
+const getStatutAndRetard = (item: ExtendedPointage): { statut: string, retardMinutes: number } => {
+  // Cas 1: Absence virtuelle
+  if (item.isVirtual) {
+    return { statut: "Absent", retardMinutes: 0 };
+  }
 
-    if (arrivee <= debut) return "Présent";
-    return "Retard";
+  // Cas 2: Pas d'heure d'arrivée = Absent
+  if (!item.heure_arrivee || item.heure_arrivee.trim() === "") {
+    return { statut: "Absent", retardMinutes: 0 };
+  }
+
+  // Cas 3: Si le statut est déjà "Permission", on ne recalcule pas
+  if (item.statut === "Permission") {
+    return { statut: "Permission", retardMinutes: 0 };
+  }
+
+  // Calcul du retard
+  let retardMinutes = 0;
+  try {
+    const datePointage = new Date(item.date_pointage);
+    const horaire = getHoraireForDate(datePointage);
+    
+    if (horaire) {
+      const [hArr, mArr] = item.heure_arrivee.split(":").map(Number);
+      const [hDeb, mDeb] = horaire.heure_entree.split(":").map(Number);
+      
+      if (!isNaN(hArr) && !isNaN(mArr) && !isNaN(hDeb) && !isNaN(mDeb)) {
+        const arriveeMinutes = hArr * 60 + mArr;
+        const debutMinutes = hDeb * 60 + mDeb;
+        const margeTolerance = 5; // 5 minutes de tolérance
+        retardMinutes = Math.max(0, arriveeMinutes - debutMinutes - margeTolerance);
+      }
+    }
+  } catch (error) {
+    console.error("Erreur calcul retard:", error);
+  }
+
+  // Détermination du statut
+  let statut = "Présent";
+  
+  if (retardMinutes > 0) {
+    statut = `Retard (${retardMinutes}min)`;
+  } else if (item.statut === "Absent") {
+    statut = "Absent";
+  }
+
+  return { statut, retardMinutes };
+};
+
+  /**
+   * Obtient l'heure théorique d'entrée pour un pointage
+   */
+  const getHeureTheorique = (item: ExtendedPointage): string => {
+    if (item.heureEntreeTheorique) {
+      return item.heureEntreeTheorique;
+    }
+    
+    try {
+      const datePointage = new Date(item.date_pointage);
+      const horaire = getHoraireForDate(datePointage);
+      return horaire ? horaire.heure_entree : "09:00";
+    } catch {
+      return "09:00";
+    }
   };
 
   /**
@@ -100,11 +155,17 @@ export default function PointageTableOne() {
   const getCombinedData = (): ExtendedPointage[] => {
     // Formater la date pour la comparaison
     const dateFormatted = dateFilter;
+    const datePointage = new Date(dateFormatted);
 
     // Pointages existants pour la date sélectionnée
     const pointagesDuJour = pointages.filter(p => {
-      const pointageDate = p.date_pointage.split('T')[0];
-      return pointageDate === dateFormatted;
+      try {
+        const pointageDate = new Date(p.date_pointage);
+        const pointageDateStr = pointageDate.toISOString().split('T')[0];
+        return pointageDateStr === dateFormatted;
+      } catch {
+        return false;
+      }
     });
 
     // Employés qui ont déjà pointé aujourd'hui
@@ -118,25 +179,35 @@ export default function PointageTableOne() {
     );
 
     // Convertir les employés non pointés en objets pointage "virtuels"
-    const absencesVirtuelles: ExtendedPointage[] = employeesNonPointe.map(emp => ({
-      id_pointage: -emp.id_employee,
-      id_employee: emp.id_employee,
-      date_pointage: dateFormatted,
-      heure_arrivee: "",
-      heure_depart: "",
-      statut: "Absent",
-      Employee: {
-        prenom: emp.prenom || "",
-        nom: emp.nom || ""
-      },
-      isVirtual: true
-    }));
+    const absencesVirtuelles: ExtendedPointage[] = employeesNonPointe.map(emp => {
+      const horaire = getHoraireForDate(datePointage);
+      
+      return {
+        id_pointage: -emp.id_employee,
+        id_employee: emp.id_employee,
+        date_pointage: dateFormatted,
+        heure_arrivee: "",
+        heure_depart: "",
+        statut: "Absent",
+        Employee: {
+          prenom: emp.prenom || "",
+          nom: emp.nom || ""
+        },
+        heureEntreeTheorique: horaire ? horaire.heure_entree : "09:00",
+        isVirtual: true
+      };
+    });
 
-    // Ajouter le flag isVirtual aux pointages existants
-    const pointagesAvecFlag = pointagesDuJour.map(p => ({
-      ...p,
-      isVirtual: false
-    }));
+    // Ajouter le flag isVirtual et heure théorique aux pointages existants
+    const pointagesAvecFlag = pointagesDuJour.map(p => {
+      const horaire = getHoraireForDate(new Date(p.date_pointage));
+      
+      return {
+        ...p,
+        isVirtual: false,
+        heureEntreeTheorique: horaire ? horaire.heure_entree : "09:00"
+      };
+    });
 
     // Combiner pointages réels et absences virtuelles
     return [...pointagesAvecFlag, ...absencesVirtuelles];
@@ -147,13 +218,52 @@ export default function PointageTableOne() {
    */
   const handlePointerArrivee = async (employeeId: number) => {
     try {
-      await enregistrerArrivee(employeeId);
+      const maintenant = new Date();
+      const aujourdHui = new Date(maintenant);
+      aujourdHui.setHours(0, 0, 0, 0);
       
-      // Rafraîchir les pointages après enregistrement
+      // Trouver l'horaire théorique
+      const horaire = getHoraireForDate(aujourdHui);
+      const heureTheorique = horaire ? horaire.heure_entree : "09:00";
+      
+      // Formatage de l'heure actuelle
+      const heures = maintenant.getHours().toString().padStart(2, '0');
+      const minutes = maintenant.getMinutes().toString().padStart(2, '0');
+      const heureActuelle = `${heures}:${minutes}`;
+      
+      // Calcul du statut basé sur la comparaison
+      let statut = "Présent";
+      let retardMinutes = 0;
+      
+      if (horaire) {
+        const [hAct, mAct] = heureActuelle.split(":").map(Number);
+        const [hTheo, mTheo] = heureTheorique.split(":").map(Number);
+        
+        if (!isNaN(hAct) && !isNaN(mAct) && !isNaN(hTheo) && !isNaN(mTheo)) {
+          const actuelMinutes = hAct * 60 + mAct;
+          const theoMinutes = hTheo * 60 + mTheo;
+          const margeTolerance = 5;
+          retardMinutes = Math.max(0, actuelMinutes - theoMinutes - margeTolerance);
+          
+          if (retardMinutes > 0) {
+            statut = `Retard (${retardMinutes}min)`;
+          }
+        }
+      }
+      
+      // Enregistrer l'arrivée avec le statut calculé
+      await enregistrerArrivee(employeeId, heureActuelle, statut);
+      
+      // Rafraîchir les pointages
       const updatedPointages = await getPointages();
       setPointages(updatedPointages);
       
-      alert("Arrivée enregistrée avec succès !");
+      // Message d'alerte approprié
+      if (retardMinutes > 0) {
+        alert(`Arrivée enregistrée à ${heureActuelle} - Retard de ${retardMinutes} minutes`);
+      } else {
+        alert(`Arrivée enregistrée à ${heureActuelle} - À l'heure`);
+      }
     } catch (error) {
       console.error("Erreur lors du pointage d'arrivée :", error);
       alert("Erreur lors de l'enregistrement de l'arrivée");
@@ -179,49 +289,16 @@ export default function PointageTableOne() {
     }
   };
 
-  /**
-   * Fonction pour pointer tous les absents
-   */
-  const handlePointerTous = async () => {
-    const combinedData = getCombinedData();
-    const absents = combinedData.filter(item => item.isVirtual);
-    
-    if (absents.length === 0) {
-      alert("Aucun employé absent à pointer");
-      return;
-    }
-
-    if (!window.confirm(`Pointer l'arrivée pour ${absents.length} employé(s) absent(s) ?`)) {
-      return;
-    }
-
-    try {
-      // Pointer chaque employé absent
-      for (const absent of absents) {
-        try {
-          await enregistrerArrivee(absent.id_employee);
-          await new Promise(resolve => setTimeout(resolve, 100));
-        } catch (error) {
-          console.error(`Erreur pour l'employé ${absent.id_employee}:`, error);
-        }
-      }
-
-      // Rafraîchir les données
-      const updatedPointages = await getPointages();
-      setPointages(updatedPointages);
-      
-      alert(`${absents.length} employé(s) pointé(s) avec succès`);
-    } catch (error) {
-      console.error("Erreur lors du pointage multiple :", error);
-      alert("Erreur lors du pointage de certains employés");
-    }
-  };
-
   // Obtenir les données combinées
   const combinedData = getCombinedData();
 
   // Appliquer les filtres supplémentaires
   const filteredData = combinedData.filter((item) => {
+    // Filtre par employé sélectionné
+    let matchEmployee = true;
+    if (selectedEmployee !== "all") {
+      matchEmployee = item.id_employee === Number(selectedEmployee);
+    }
     
     // Filtre par nom/prénom
     let matchName = true;
@@ -237,7 +314,7 @@ export default function PointageTableOne() {
       }
     }
     
-    return matchName;
+    return matchEmployee && matchName;
   });
 
   // Pagination sur les données filtrées
@@ -247,6 +324,10 @@ export default function PointageTableOne() {
   const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
 
   // Gestion des changements de filtre
+  const handleEmployeeChange = (value: string) => {
+    setSelectedEmployee(value);
+    setCurrentPage(1);
+  };
 
   const handleDateChange = (value: string) => {
     setDateFilter(value);
@@ -266,13 +347,25 @@ export default function PointageTableOne() {
     setCurrentPage(1);
   };
 
-  // Statistiques
+  // Calcul des statistiques
   const stats = {
     total: combinedData.length,
-    present: combinedData.filter(item => getStatut(item) === "Présent").length,
-    retard: combinedData.filter(item => getStatut(item) === "Retard").length,
-    absent: combinedData.filter(item => getStatut(item) === "Absent").length,
-    permission: combinedData.filter(item => getStatut(item) === "Permission").length,
+    present: combinedData.filter(item => {
+      const { statut } = getStatutAndRetard(item);
+      return statut === "Présent";
+    }).length,
+    retard: combinedData.filter(item => {
+      const { statut } = getStatutAndRetard(item);
+      return statut.includes("Retard");
+    }).length,
+    absent: combinedData.filter(item => {
+      const { statut } = getStatutAndRetard(item);
+      return statut === "Absent";
+    }).length,
+    permission: combinedData.filter(item => {
+      const { statut } = getStatutAndRetard(item);
+      return statut === "Permission";
+    }).length,
     avecDepart: combinedData.filter(item => item.heure_depart && !item.isVirtual).length,
   };
 
@@ -281,6 +374,25 @@ export default function PointageTableOne() {
       {/* Section filtres */}
       <div className="p-4 border-b border-gray-100 dark:border-white/[0.05]">
         <div className="flex flex-wrap gap-4 mb-4">
+          {/* Filtre par employé */}
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Employé
+            </label>
+            <select
+              value={selectedEmployee}
+              onChange={(e) => handleEmployeeChange(e.target.value)}
+              className="w-full border px-3 py-2 rounded-md text-sm"
+            >
+              <option value="all">Tous les employés</option>
+              {employees.map(emp => (
+                <option key={emp.id_employee} value={emp.id_employee}>
+                  {emp.prenom} {emp.nom}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Date du pointage */}
           <div className="flex-1 min-w-[200px]">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -360,6 +472,7 @@ export default function PointageTableOne() {
               <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start">ID</TableCell>
               <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start">Employé</TableCell>
               <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start">Date</TableCell>
+              <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start">Heure théorique</TableCell>
               <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start">Heure d'arrivée</TableCell>
               <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start">Heure départ</TableCell>
               <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start">Statut</TableCell>
@@ -370,7 +483,7 @@ export default function PointageTableOne() {
           <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
             {filteredData.length === 0 ? (
               <TableRow>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                <td colSpan={8} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                   Aucun pointage trouvé pour cette date.
                 </td>
               </TableRow>
@@ -380,10 +493,11 @@ export default function PointageTableOne() {
                   ? `${item.Employee.prenom} ${item.Employee.nom}`
                   : "Employé inconnu";
                 
-                const statut = getStatut(item);
+                const { statut, retardMinutes } = getStatutAndRetard(item);
                 const estVirtual = item.isVirtual;
                 const aDejaArrive = item.heure_arrivee && !estVirtual;
                 const aDejaParti = item.heure_depart && !estVirtual;
+                const heureTheorique = getHeureTheorique(item);
                 
                 return (
                   <TableRow 
@@ -400,12 +514,23 @@ export default function PointageTableOne() {
                       {formatDate(item.date_pointage)}
                     </TableCell>
                     <TableCell className="px-4 py-3 text-gray-600">
+                      <div className="flex items-center gap-1">
+                        <FiClock className="text-purple-500" size={14} />
+                        <span>{heureTheorique}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-gray-600">
                       {estVirtual ? (
                         <span className="text-red-500 italic">Non pointé</span>
                       ) : item.heure_arrivee ? (
                         <div className="flex items-center gap-1">
                           <FiLogIn className="text-green-500" size={14} />
                           <span>{formatTime(item.heure_arrivee)}</span>
+                          {retardMinutes > 0 && (
+                            <span className="text-xs text-yellow-600 bg-yellow-100 px-1 py-0.5 rounded ml-1">
+                              +{retardMinutes}min
+                            </span>
+                          )}
                         </div>
                       ) : (
                         "-"
@@ -427,7 +552,7 @@ export default function PointageTableOne() {
                         color={
                           statut === "Présent"
                             ? "success"
-                            : statut === "Retard"
+                            : statut.includes("Retard")
                             ? "warning"
                             : statut === "Permission"
                             ? "info"

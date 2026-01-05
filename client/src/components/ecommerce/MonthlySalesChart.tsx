@@ -88,7 +88,7 @@ export default function MonthlySalesChart() {
   const series = [
     {
       name: "Absents",
-      data: [5, 12, 2, 9, 7, 9, 1, 11, 5, 3, 8, 2], 
+      data: [5, 7, 2, 9, 7, 9, 5, 5, 5, 3, 12, 22], 
     },
   ];
   const [isOpen, setIsOpen] = useState(false);
