@@ -3,7 +3,7 @@ import axios from "axios";
 const API_URL = "http://localhost:3000/api/absences";
 
 export interface Absence {
-  retard: any;
+  
   id_absence: number;
   id_employee: number;
   date_debut: string;

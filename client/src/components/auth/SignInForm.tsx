@@ -53,7 +53,12 @@ export default function SignInForm() {
       });
 
       if (res.user.employee?.id_employee) {
-        await enregistrerArrivee(res.user.employee.id_employee);
+        await enregistrerArrivee(
+          res.user.employee.id_employee,
+          new Date().toISOString(),
+          "Présent"
+        );
+
         console.log("Pointage enregistré !");
       } else {
         console.warn("Aucun employee.id_employee reçu !");

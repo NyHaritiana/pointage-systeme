@@ -15,18 +15,20 @@ export interface Pointage {
   };
 }
 
-export const enregistrerArrivee = async (id_employee: number, heureActuelle: string, statut: string): Promise<Pointage> => {
-  try {
-    const res = await axios.post<{ message: string; pointage: Pointage }>(
-      `${API_URL}/arrivee`, 
-      { id_employee }
-    );
-    return res.data.pointage;
-  } catch (error) {
-    console.error("Erreur lors de l'enregistrement de l'arrivée :", error);
-    throw error;
-  }
+export const enregistrerArrivee = async (
+  id_employee: number,
+  heureActuelle: string,
+  statut: string
+): Promise<Pointage> => {
+  const response = await axios.post("/pointage/arrivee", {
+    id_employee,
+    heureActuelle,
+    statut,
+  });
+
+  return response.data;
 };
+
 
 export const enregistrerDepart = async (id_pointage: number): Promise<Pointage> => {
   try {
