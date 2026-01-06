@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:3000/api/employees";
+const API_URL = `${import.meta.env.VITE_API_URL}/api/employees`;
 
 export interface Employee {
   id_employee: number;
