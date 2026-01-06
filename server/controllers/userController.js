@@ -58,8 +58,7 @@ module.exports = {
       console.error("Erreur register :", error);
       res.status(500).json({ message: "Erreur lors de l'inscription." });
     }
-  }
-,
+  },
 
   async login(req, res) {
     try {
@@ -112,6 +111,18 @@ module.exports = {
     } catch (error) {
       console.error("Erreur login :", error);
       res.status(500).json({ message: 'Erreur lors de la connexion.' });
+    }
+  },
+  async getAllUsers(req, res) {
+    try {
+      const users = await User.findAll({
+        include: Employee,
+      });
+
+      res.json(users);
+    } catch (err) {
+      console.error("Erreur getAllUsers :", err);
+      res.status(500).json({ message: "Erreur serveur." });
     }
   },
 };
