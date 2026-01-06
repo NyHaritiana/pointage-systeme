@@ -20,7 +20,7 @@ export const enregistrerArrivee = async (
   heureActuelle: string,
   statut: string
 ): Promise<Pointage> => {
-  const response = await axios.post("/pointage/arrivee", {
+  const response = await axios.post(`${API_URL}/arrivee`, {
     id_employee,
     heureActuelle,
     statut,
