@@ -7,6 +7,8 @@ import App from "./App.tsx";
 import { AppWrapper } from "./components/common/PageMeta.tsx";
 import { ThemeProvider } from "./context/ThemeContext.tsx";
 
+console.log("Backend URL:", import.meta.env.VITE_API_URL);
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider>
