@@ -15,7 +15,10 @@ const app = express();
 const port = 3000;
 
 const corsOption = {
-  origin: 'https://pointage-systeme-8d6v.vercel.app',
+  origin: [
+    'https://pointage-systeme-8d6v.vercel.app',
+    'https://pointage-systeme-8d6v-khfv0m077-ny-harts-projects.vercel.app',
+  ],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   optionsSuccessStatus: 200
