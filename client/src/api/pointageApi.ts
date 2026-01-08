@@ -15,29 +15,28 @@ export interface Pointage {
   };
 }
 
-export const enregistrerArrivee = async (
-  id_employee: number
-): Promise<Pointage> => {
-  const response = await axios.post<{ message: string; pointage: Pointage }>(
-    `${API_URL}/arrivee`,
-    { id_employee }
-  );
-
-  return response.data.pointage;
+/**
+ * Enregistrer l'arrivée d'un employé
+ */
+export const enregistrerArrivee = async (id_employee: number): Promise<Pointage> => {
+  const response = await axios.post(`${API_URL}/arrivee`, { id_employee });
+  return response.data.pointage; // Retourne uniquement le pointage
 };
 
-export const enregistrerDepart = async (
-  id_pointage: number
-): Promise<Pointage> => {
+/**
+ * Enregistrer le départ d'un employé
+ */
+export const enregistrerDepart = async (id_pointage: number): Promise<Pointage> => {
   const response = await axios.put<{ message: string; pointage: Pointage }>(
-    `${API_URL}/depart/${id_pointage}`
+    `${API_URL}/${id_pointage}/depart`
   );
-
   return response.data.pointage;
 };
 
-
+/**
+ * Récupérer tous les pointages
+ */
 export const getPointages = async (): Promise<Pointage[]> => {
-  const res = await axios.get<Pointage[]>(API_URL);
-  return res.data;
+  const response = await axios.get<Pointage[]>(API_URL);
+  return response.data;
 };
