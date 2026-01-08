@@ -246,13 +246,15 @@ const getStatutAndRetard = (item: ExtendedPointage): { statut: string, retardMin
           retardMinutes = Math.max(0, actuelMinutes - theoMinutes - margeTolerance);
           
           if (retardMinutes > 0) {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             statut = `Retard (${retardMinutes}min)`;
           }
         }
       }
       
       // Enregistrer l'arrivée avec le statut calculé
-      await enregistrerArrivee(employeeId, heureActuelle, statut);
+      await enregistrerArrivee(employeeId);
+
       
       // Rafraîchir les pointages
       const updatedPointages = await getPointages();
@@ -540,7 +542,7 @@ const getStatutAndRetard = (item: ExtendedPointage): { statut: string, retardMin
                       {aDejaParti ? (
                         <div className="flex items-center gap-1">
                           <FiLogOut className="text-blue-500" size={14} />
-                          <span>{formatTime(item.heure_depart)}</span>
+                          <span>{formatTime(item.heure_depart || "")}</span>
                         </div>
                       ) : (
                         "-"
