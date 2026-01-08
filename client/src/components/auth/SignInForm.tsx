@@ -37,7 +37,7 @@ export default function SignInForm() {
     setLoading(true);
 
     try {
-      // 🔐 LOGIN
+
       const res = await loginUser(formData.email, formData.password);
 
       if (!res.user || !res.token) {
@@ -47,7 +47,7 @@ export default function SignInForm() {
 
       console.log("[LOGIN] User :", res.user);
 
-      // ✅ POINTAGE ARRIVÉE
+
       if (res.user.employee?.id_employee) {
         await enregistrerArrivee(res.user.employee.id_employee);
         console.log("✅ Arrivée enregistrée");
@@ -57,13 +57,13 @@ export default function SignInForm() {
 
       toast.success("Connexion réussie !");
 
-      // 💾 STOCKAGE
+
       localStorage.setItem("token", res.token);
       localStorage.setItem("user", JSON.stringify(res.user));
       const role = (res.user.role || "employe").toLowerCase();
       localStorage.setItem("role", role);
 
-      // 🚦 REDIRECTION
+
       switch (role) {
         case "admin":
         case "rh":
