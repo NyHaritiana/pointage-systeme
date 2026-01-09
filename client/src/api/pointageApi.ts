@@ -19,7 +19,7 @@ export interface Pointage {
  * Enregistrer l'arrivée d'un employé
  */
 export const enregistrerArrivee = async (id_employee: number): Promise<Pointage> => {
-  const response = await axios.post(`${API_URL}/arrivee`, { id_employee });
+  const response = await axios.post("https://pointage-systeme.onrender.com/api/pointages/arrivee", { id_employee });
   return response.data.pointage; // Retourne uniquement le pointage
 };
 
@@ -28,7 +28,7 @@ export const enregistrerArrivee = async (id_employee: number): Promise<Pointage>
  */
 export const enregistrerDepart = async (id_pointage: number): Promise<Pointage> => {
   const response = await axios.put<{ message: string; pointage: Pointage }>(
-    `${API_URL}/${id_pointage}/depart`
+    `https://pointage-systeme.onrender.com/api/pointages/${id_pointage}/depart`
   );
   return response.data.pointage;
 };
