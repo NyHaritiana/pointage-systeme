@@ -232,7 +232,6 @@ const getStatutAndRetard = (item: ExtendedPointage): { statut: string, retardMin
       const heureActuelle = `${heures}:${minutes}`;
       
       // Calcul du statut basé sur la comparaison
-      let statut = "Présent";
       let retardMinutes = 0;
       
       if (horaire) {
@@ -244,11 +243,6 @@ const getStatutAndRetard = (item: ExtendedPointage): { statut: string, retardMin
           const theoMinutes = hTheo * 60 + mTheo;
           const margeTolerance = 5;
           retardMinutes = Math.max(0, actuelMinutes - theoMinutes - margeTolerance);
-          
-          if (retardMinutes > 0) {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            statut = `Retard (${retardMinutes}min)`;
-          }
         }
       }
       
