@@ -20,7 +20,7 @@ const corsOptions = {
   origin: function (origin, callback) {
     // Liste des origines autorisées
     const allowedOrigins = [
-      'https://pointage-systeme-8d6v.vercel.app',
+      'https://pointage-systeme-1.onrender.com',
       'http://localhost:3000',
       'http://localhost:5173',
       'http://localhost:5174'
