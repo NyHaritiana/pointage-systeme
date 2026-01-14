@@ -1,4 +1,3 @@
-// app.js
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -48,7 +47,8 @@ const corsOptions = {
 
 // Middlewares
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Préflight requests
+// CORRECTION : Changement de '*' à '/*'
+app.options('/*', cors(corsOptions)); // Ligne 51 corrigée
 
 app.use(bodyParser.json());
 app.use(express.json());
@@ -73,7 +73,8 @@ app.use('/api/users', userRoutes);
 app.use("/api/notifications", notificationRoutes);
 
 // Route 404 pour les routes non trouvées
-app.use('*', (req, res) => {
+// CORRECTION ICI AUSSI : Changement de '*' à '/*'
+app.use('/*', (req, res) => {
   console.log('Route non trouvée:', req.originalUrl);
   res.status(404).json({ 
     error: 'Route non trouvée',
@@ -101,7 +102,7 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(port, () => {
-  console.log(`🚀 Serveur démarré sur le port ${port}`);
-  console.log(`🌍 Environnement: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`✅ CORS activé pour les origines autorisées`);
+  console.log(`Serveur démarré sur le port ${port}`);
+  console.log(`Environnement: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`CORS activé pour les origines autorisées`);
 });
