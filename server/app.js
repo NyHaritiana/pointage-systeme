@@ -48,7 +48,7 @@ const corsOptions = {
 // Middlewares
 app.use(cors(corsOptions));
 // CORRECTION : Changement de '*' à '/*'
-app.options('/*', cors(corsOptions)); // Ligne 51 corrigée
+app.options('*', cors(corsOptions)); // Ligne 51 corrigée
 
 app.use(bodyParser.json());
 app.use(express.json());
