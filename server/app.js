@@ -55,7 +55,7 @@ app.use("/api/notifications", notificationRoutes);
 
 // CORRECTION : Route 404 - approche différente
 // Utilisez app.all() avec un chemin spécifique ou un middleware sans chemin
-app.all('*', (req, res, next) => {
+app.all(/.*/, (req, res, next) => {
   const err = new Error(`Route ${req.originalUrl} not found`);
   err.statusCode = 404;
   next(err);
