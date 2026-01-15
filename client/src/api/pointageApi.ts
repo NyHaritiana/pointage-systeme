@@ -2,7 +2,7 @@
 import axios from "axios";
 
 // URL de base de l'API backend
-const API_BASE_URL = import.meta.env.VITE_API_URL || "https://pointage-systeme.onrender.com";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "https://server-pointage-systeme.onrender.com";
 
 export interface Pointage {
   id_pointage: number;

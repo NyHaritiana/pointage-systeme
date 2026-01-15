@@ -27,7 +27,7 @@ export default function SignUpForm() {
 
     try {
       const res = await axios.get<{ employeeId: number }>(
-        `https://pointage-systeme.onrender.com/api/employees/by-matricule/${formData.num_matricule}`
+        `https://server-pointage-systeme.onrender.com/api/employees/by-matricule/${formData.num_matricule}`
       );
       const id_employee = res.data.employeeId;
 
