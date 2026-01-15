@@ -47,8 +47,25 @@ const corsOptions = {
 
 // Middlewares
 app.use(cors(corsOptions));
-// CORRECTION : Changement de '*' à '/*'
-app.options('*', cors(corsOptions)); // Ligne 51 corrigée
+
+// CORRECTION : Gérer les requêtes OPTIONS manuellement
+app.options('*', (req, res) => {
+  const origin = req.headers.origin;
+  const allowedOrigins = [
+    'https://pointage-systeme-1.onrender.com',
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://localhost:5174'
+  ];
+  
+  if (process.env.NODE_ENV !== 'production' || !origin || allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+  }
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.status(200).end();
+});
 
 app.use(bodyParser.json());
 app.use(express.json());
@@ -73,8 +90,8 @@ app.use('/api/users', userRoutes);
 app.use("/api/notifications", notificationRoutes);
 
 // Route 404 pour les routes non trouvées
-// CORRECTION ICI AUSSI : Changement de '*' à '/*'
-app.use('/*', (req, res) => {
+// CORRECTION : Utiliser '*' au lieu de '/*'
+app.use('*', (req, res) => {
   console.log('Route non trouvée:', req.originalUrl);
   res.status(404).json({ 
     error: 'Route non trouvée',
