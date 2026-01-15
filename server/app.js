@@ -29,9 +29,7 @@ const corsOptions = {
 };
 
 // Middlewares
-app.use(cors(corsOptions)); // Cette ligne suffit pour CORS
-// SUPPRIMEZ ou COMMENTER la ligne suivante :
-// app.options('*', cors(corsOptions)); // Ligne 52 à supprimer
+app.use(cors(corsOptions));
 
 app.use(bodyParser.json());
 app.use(express.json());
@@ -55,15 +53,26 @@ app.use('/api/horaires', hoaraireRoutes);
 app.use('/api/users', userRoutes);
 app.use("/api/notifications", notificationRoutes);
 
-// Route 404 pour les routes non trouvées
-app.use('*', (req, res) => {
-  console.log('Route non trouvée:', req.originalUrl);
-  res.status(404).json({ 
-    error: 'Route non trouvée',
-    path: req.originalUrl,
-    method: req.method
-  });
+// CORRECTION : Route 404 - approche différente
+// Utilisez app.all() avec un chemin spécifique ou un middleware sans chemin
+app.all('*', (req, res, next) => {
+  const err = new Error(`Route ${req.originalUrl} not found`);
+  err.statusCode = 404;
+  next(err);
 });
+
+// OU cette alternative (choisissez une seule) :
+// app.use((req, res, next) => {
+//   if (!req.route) { // Si aucune route n'a été trouvée
+//     console.log('Route non trouvée:', req.originalUrl);
+//     return res.status(404).json({ 
+//       error: 'Route non trouvée',
+//       path: req.originalUrl,
+//       method: req.method
+//     });
+//   }
+//   next();
+// });
 
 // Gestionnaire d'erreurs global
 app.use((err, req, res, next) => {
@@ -73,6 +82,16 @@ app.use((err, req, res, next) => {
     return res.status(403).json({ 
       error: 'CORS Error', 
       message: 'Origin non autorisée' 
+    });
+  }
+  
+  // Gérer l'erreur 404
+  if (err.statusCode === 404) {
+    return res.status(404).json({ 
+      error: 'Route non trouvée',
+      path: req.originalUrl,
+      method: req.method,
+      message: err.message
     });
   }
   
