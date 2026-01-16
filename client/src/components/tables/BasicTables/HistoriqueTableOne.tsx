@@ -35,7 +35,7 @@ export default function HistoriqueTableOne() {
     const fetchAbsences = async () => {
       try {
         const res = await axios.get(
-          `https://pointage-systeme.onrender.com/api/absences/employee/${idEmployee}`
+          `https://server-pointage-systeme.onrender.com/api/absences/employee/${idEmployee}`
         );
         setAbsences(res.data);
       } catch (error) {
