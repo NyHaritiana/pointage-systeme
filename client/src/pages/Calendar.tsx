@@ -16,6 +16,8 @@ import {
 } from "../api/absenceApi";
 import type { Absence } from "../api/absenceApi";
 
+/* ================= TYPES ================= */
+
 interface CalendarEvent extends EventInput {
   id: string;
   title: string;
@@ -30,7 +32,21 @@ interface CalendarEvent extends EventInput {
   };
 }
 
-const typeImpacteSolde = (type: Absence["type_absence"]) =>
+// Types pour eventType avec possibilité du placeholder ""
+type EventType =
+  | ""
+  | "Conge Paye"
+  | "Permission"
+  | "Arret Maladie"
+  | "Conge de Maternite"
+  | "Conge de Paternite"
+  | "Assistance Maternelle"
+  | "Conge Formation"
+  | "Mission";
+
+/* ================= UTILS ================= */
+
+const typeImpacteSolde = (type: EventType) =>
   type === "Conge Paye" || type === "Permission";
 
 const getStatusColor = (statut?: Absence["statut"]) => {
@@ -59,6 +75,8 @@ const calculerJoursOuvres = (debut: string, fin: string): number => {
   return count;
 };
 
+/* ================= COMPOSANT ================= */
+
 const Calendar: React.FC = () => {
   const calendarRef = useRef<FullCalendar>(null);
   const { isOpen, openModal, closeModal } = useModal();
@@ -70,7 +88,7 @@ const Calendar: React.FC = () => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 
-  const [eventType, setEventType] = useState<Absence["type_absence"]>("Conge Paye");
+  const [eventType, setEventType] = useState<EventType>("");  
   const [eventMotif, setEventMotif] = useState("");
   const [eventStartDate, setEventStartDate] = useState("");
   const [eventEndDate, setEventEndDate] = useState("");
@@ -79,8 +97,10 @@ const Calendar: React.FC = () => {
   const [joursDemandes, setJoursDemandes] = useState(0);
   const [soldeApres, setSoldeApres] = useState(0);
 
-  const loadSolde = async (type: Absence["type_absence"]) => {
-    if (!typeImpacteSolde(type)) {
+  /* ================= API ================= */
+
+  const loadSolde = async (type: EventType) => {
+    if (!typeImpacteSolde(type) || !type) {
       setSoldeAvant(0);
       return;
     }
@@ -128,7 +148,7 @@ const Calendar: React.FC = () => {
   }, [id_employee]);
 
   useEffect(() => {
-    if (!eventStartDate || !eventEndDate) {
+    if (!eventStartDate || !eventEndDate || !eventType) {
       setJoursDemandes(0);
       setSoldeApres(soldeAvant);
       return;
@@ -140,7 +160,7 @@ const Calendar: React.FC = () => {
     setSoldeApres(typeImpacteSolde(eventType) ? soldeAvant - jours : soldeAvant);
   }, [eventStartDate, eventEndDate, eventType, soldeAvant]);
 
-  // ===== HANDLERS =====
+  /* ================= HANDLERS ================= */
 
   const handleDateSelect = (selectInfo: DateSelectArg) => {
     resetModal();
@@ -152,14 +172,17 @@ const Calendar: React.FC = () => {
   const handleEventClick = (clickInfo: EventClickArg) => {
     const ev = clickInfo.event as unknown as CalendarEvent;
     setSelectedEvent(ev);
-    setEventType(ev.title as Absence["type_absence"]);
+    setEventType(ev.title as EventType);
     setEventMotif(ev.extendedProps.motif || "");
     setEventStartDate(ev.startStr);
     setEventEndDate(ev.endStr || ev.startStr);
+    loadSolde(ev.title as EventType);
     openModal();
   };
 
   const handleAddOrUpdateEvent = async () => {
+    if (!eventType) return alert("Veuillez sélectionner un type d'absence");
+
     if (typeImpacteSolde(eventType) && soldeApres < 0) {
       alert("Solde insuffisant");
       return;
@@ -215,7 +238,7 @@ const Calendar: React.FC = () => {
 
   const resetModal = () => {
     setSelectedEvent(null);
-    setEventType("Conge Paye");
+    setEventType(""); // placeholder par défaut
     setEventMotif("");
     setEventStartDate("");
     setEventEndDate("");
@@ -223,6 +246,8 @@ const Calendar: React.FC = () => {
     setJoursDemandes(0);
     setSoldeApres(0);
   };
+
+  /* ================= RENDER ================= */
 
   return (
     <>
@@ -263,15 +288,13 @@ const Calendar: React.FC = () => {
         <select
           value={eventType}
           onChange={(e) => {
-            const type = e.target.value as Absence["type_absence"];
+            const type = e.target.value as EventType;
             setEventType(type);
-            loadSolde(type);
+            if (type) loadSolde(type);
           }}
-          className="w-full mb-3 p-2 border rounded"
+          className={`w-full mb-3 p-2 border rounded ${!eventType ? "text-gray-400" : "text-black"}`}
         >
-          <option value="" disabled hidden>
-            Sélectionner
-          </option>
+          <option value="" disabled hidden>Sélectionner</option>
           <option value="Conge Paye">Congé Payé</option>
           <option value="Permission">Permission</option>
           <option value="Arret Maladie">Arrêt Maladie</option>
