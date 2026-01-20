@@ -265,10 +265,13 @@ const Calendar: React.FC = () => {
           onChange={(e) => {
             const type = e.target.value as Absence["type_absence"];
             setEventType(type);
-            loadSolde(type); // ⚡ charge le solde uniquement pour ce type
+            loadSolde(type);
           }}
           className="w-full mb-3 p-2 border rounded"
         >
+          <option value="" disabled hidden>
+            Sélectionner
+          </option>
           <option value="Conge Paye">Congé Payé</option>
           <option value="Permission">Permission</option>
           <option value="Arret Maladie">Arrêt Maladie</option>
