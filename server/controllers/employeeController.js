@@ -1,19 +1,37 @@
-const Employee = require("../models/Employee.js")
+const Employee = require("../models/Employee.js");
 const SoldeConge = require('../models/SoldeConge');
+
+const TYPES_CONGE_QUOTA = [
+  { type: "Conge Paye", quota: 30 },
+  { type: "Permission", quota: 10 },
+  { type: "Conge de Maternite", quota: 98 },
+  { type: "Conge de Paternite", quota: 3 },
+  { type: "Arret Maladie", quota: null },
+  { type: "Assistance Maternelle", quota: null },
+  { type: "Conge Formation", quota: null },
+  { type: "Mission", quota: null },
+];
 
 const createEmployee = async (req, res) => {
   try {
+    // Création de l'employé
     const employee = await Employee.create(req.body);
 
-    await SoldeConge.create({
-      id_employee: employee.id_employee,
-      annee: new Date().getFullYear(),
-      solde_initial: 30,
-      solde_restant: 30,
-    });
+    // Initialisation du solde pour tous les types d'absence
+    const annee = new Date().getFullYear();
+    for (const c of TYPES_CONGE_QUOTA) {
+      await SoldeConge.create({
+        id_employee: employee.id_employee,
+        annee,
+        type_absence: c.type,
+        solde_initial: c.quota,
+        solde_restant: c.quota,
+      });
+    }
 
     res.status(201).json(employee);
   } catch (error) {
+    console.error("Erreur création employé :", error);
     res.status(400).json({ message: error.message });
   }
 };
@@ -53,7 +71,6 @@ const getEmployeeByMatricule = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 
 const updateEmployee = async (req, res) => {
   try {

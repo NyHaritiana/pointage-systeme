@@ -21,15 +21,26 @@ const SoldeConge = sequelize.define('SoldeConge', {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
+  type_absence: {
+    type: DataTypes.ENUM(
+      'Conge Paye',
+      'Permission',
+      'Arret Maladie',
+      'Conge de Maternite',
+      'Conge de Paternite',
+      'Assistance Maternelle',
+      'Conge Formation',
+      'Mission'
+    ),
+    allowNull: false,
+  },
   solde_initial: {
     type: DataTypes.INTEGER,
-    allowNull: false,
-    defaultValue: 30,
+    allowNull: true,
   },
   solde_restant: {
     type: DataTypes.INTEGER,
-    allowNull: false,
-    defaultValue: 30,
+    allowNull: true,
   },
 }, {
   tableName: 'SOLDE_CONGE',
