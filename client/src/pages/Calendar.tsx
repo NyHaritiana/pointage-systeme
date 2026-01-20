@@ -16,8 +16,6 @@ import {
 } from "../api/absenceApi";
 import type { Absence } from "../api/absenceApi";
 
-/* ================= TYPES ================= */
-
 interface CalendarEvent extends EventInput {
   id: string;
   title: string;
@@ -31,8 +29,6 @@ interface CalendarEvent extends EventInput {
     statut?: Absence["statut"];
   };
 }
-
-/* ================= UTILS ================= */
 
 const typeImpacteSolde = (type: Absence["type_absence"]) =>
   type === "Conge Paye" || type === "Permission";
@@ -55,7 +51,7 @@ const calculerJoursOuvres = (debut: string, fin: string): number => {
   const current = new Date(start);
 
   while (current <= end) {
-    const day = current.getDay(); // 0 = dimanche, 6 = samedi
+    const day = current.getDay();
     if (day !== 0 && day !== 6) count++;
     current.setDate(current.getDate() + 1);
   }
@@ -63,34 +59,25 @@ const calculerJoursOuvres = (debut: string, fin: string): number => {
   return count;
 };
 
-/* ================= COMPOSANT ================= */
-
 const Calendar: React.FC = () => {
   const calendarRef = useRef<FullCalendar>(null);
   const { isOpen, openModal, closeModal } = useModal();
 
-  /* ---------- USER ---------- */
   const storedUser = localStorage.getItem("user");
   const user = storedUser ? JSON.parse(storedUser) : null;
   const id_employee: number = user?.employee?.id_employee || 0;
 
-  /* ---------- STATE ---------- */
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [selectedEvent, setSelectedEvent] =
-    useState<CalendarEvent | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 
-  const [eventType, setEventType] =
-    useState<Absence["type_absence"]>("Conge Paye");
+  const [eventType, setEventType] = useState<Absence["type_absence"]>("Conge Paye");
   const [eventMotif, setEventMotif] = useState("");
   const [eventStartDate, setEventStartDate] = useState("");
   const [eventEndDate, setEventEndDate] = useState("");
 
-  // Solde (simulation)
   const [soldeAvant, setSoldeAvant] = useState(0);
   const [joursDemandes, setJoursDemandes] = useState(0);
   const [soldeApres, setSoldeApres] = useState(0);
-
-  /* ================= API ================= */
 
   const loadSolde = async (type: Absence["type_absence"]) => {
     if (!typeImpacteSolde(type)) {
@@ -99,9 +86,12 @@ const Calendar: React.FC = () => {
     }
 
     try {
+      const encodedType = encodeURIComponent(type);
       const res = await fetch(
-        `https://server-pointage-systeme.onrender.com/api/solde-conge/${id_employee}`
+        `https://server-pointage-systeme.onrender.com/api/solde-conge/${id_employee}/${encodedType}`
       );
+      if (!res.ok) throw new Error("Solde introuvable");
+
       const data = await res.json();
       setSoldeAvant(data.solde_restant);
     } catch (err) {
@@ -110,14 +100,11 @@ const Calendar: React.FC = () => {
     }
   };
 
-  /* ================= EFFECTS ================= */
-
   useEffect(() => {
     if (!id_employee) return;
 
     const loadAbsences = async () => {
       const data = await getAbsences();
-
       const mapped: CalendarEvent[] = data
         .filter((a) => a.id_employee === id_employee)
         .map((a) => ({
@@ -150,32 +137,25 @@ const Calendar: React.FC = () => {
     const jours = calculerJoursOuvres(eventStartDate, eventEndDate);
     setJoursDemandes(jours);
 
-    if (typeImpacteSolde(eventType)) {
-      setSoldeApres(soldeAvant - jours);
-    } else {
-      setSoldeApres(soldeAvant);
-    }
+    setSoldeApres(typeImpacteSolde(eventType) ? soldeAvant - jours : soldeAvant);
   }, [eventStartDate, eventEndDate, eventType, soldeAvant]);
 
-  /* ================= HANDLERS ================= */
+  // ===== HANDLERS =====
 
   const handleDateSelect = (selectInfo: DateSelectArg) => {
     resetModal();
     setEventStartDate(selectInfo.startStr);
     setEventEndDate(selectInfo.endStr || selectInfo.startStr);
-    loadSolde(eventType);
     openModal();
   };
 
   const handleEventClick = (clickInfo: EventClickArg) => {
     const ev = clickInfo.event as unknown as CalendarEvent;
-
     setSelectedEvent(ev);
     setEventType(ev.title as Absence["type_absence"]);
     setEventMotif(ev.extendedProps.motif || "");
     setEventStartDate(ev.startStr);
     setEventEndDate(ev.endStr || ev.startStr);
-    loadSolde(ev.title as Absence["type_absence"]);
     openModal();
   };
 
@@ -227,7 +207,6 @@ const Calendar: React.FC = () => {
 
   const handleDelete = async () => {
     if (!selectedEvent) return;
-
     await deleteAbsence(Number(selectedEvent.id));
     setEvents((prev) => prev.filter((e) => e.id !== selectedEvent.id));
     closeModal();
@@ -244,8 +223,6 @@ const Calendar: React.FC = () => {
     setJoursDemandes(0);
     setSoldeApres(0);
   };
-
-  /* ================= RENDER ================= */
 
   return (
     <>
@@ -285,9 +262,11 @@ const Calendar: React.FC = () => {
 
         <select
           value={eventType}
-          onChange={(e) =>
-            setEventType(e.target.value as Absence["type_absence"])
-          }
+          onChange={(e) => {
+            const type = e.target.value as Absence["type_absence"];
+            setEventType(type);
+            loadSolde(type); // ⚡ charge le solde uniquement pour ce type
+          }}
           className="w-full mb-3 p-2 border rounded"
         >
           <option value="Conge Paye">Congé Payé</option>
