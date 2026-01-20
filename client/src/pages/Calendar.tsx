@@ -90,7 +90,7 @@ const Calendar: React.FC = () => {
 
   const loadSolde = async () => {
     try {
-      const res = await fetch(`/api/solde-conge/${id_employee}`);
+      const res = await fetch(`https://server-pointage-systeme.onrender.com/api/solde-conge/${id_employee}`);
       const data = await res.json();
       setSoldeAvant(data.solde_restant);
     } catch (error) {
