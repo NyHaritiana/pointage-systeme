@@ -8,6 +8,7 @@ const absenceRoutes = require('./routes/absenceRoutes.js');
 const pointageRoutes = require('./routes/pointageRoutes.js');
 const hoaraireRoutes = require('./routes/horaireRoutes.js');
 const userRoutes = require('./routes/userRoutes.js');
+const soldeCongeRoutes = require('./routes/soldeCongeRoutes.js');
 const notificationRoutes = require("./routes/notificationRoutes");
 
 dotenv.config();
@@ -51,6 +52,7 @@ app.use('/api/absences', absenceRoutes);
 app.use('/api/pointages', pointageRoutes);
 app.use('/api/horaires', hoaraireRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/solde-conge', soldeCongeRoutes);
 app.use("/api/notifications", notificationRoutes);
 
 // CORRECTION : Route 404 - approche différente

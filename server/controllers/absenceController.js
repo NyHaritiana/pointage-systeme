@@ -1,5 +1,6 @@
 const Absence = require("../models/Absence.js")
 const Employee = require("../models/Employee.js");
+const SoldeConge = require('../models/SoldeConge');
 
 const createAbsence = async (req, res) => {
   try {
@@ -57,19 +58,56 @@ const getAbsencesByEmployee = async (req, res) => {
 
 const updateAbsence = async (req, res) => {
   try {
-    const [updated] = await Absence.update(req.body, {
+    const absence = await Absence.findOne({
       where: { id_absence: req.params.id_absence },
     });
-    if (updated) {
-      const absence = await Absence.findOne({ where: { id_absence: req.params.id_absence } });
-      res.json(absence);
-    } else {
-      res.status(404).json({ message: "Absence introuvable" });
+
+    if (!absence) {
+      return res.status(404).json({ message: "Absence introuvable" });
     }
+
+    const ancienStatut = absence.statut;
+    const nouveauStatut = req.body.statut;
+
+    // Mise à jour de l'absence
+    await absence.update(req.body);
+
+    // ➜ SI le statut devient "Approuve"
+    if (ancienStatut !== "Approuve" && nouveauStatut === "Approuve") {
+
+      const dateDebut = new Date(absence.date_debut);
+      const dateFin = new Date(absence.date_fin);
+      const nbJours =
+        Math.floor((dateFin - dateDebut) / (1000 * 60 * 60 * 24)) + 1;
+
+      const annee = dateDebut.getFullYear();
+
+      const solde = await SoldeConge.findOne({
+        where: {
+          id_employee: absence.id_employee,
+          annee,
+        },
+      });
+
+      if (!solde) {
+        return res.status(400).json({ message: "Solde de congé introuvable" });
+      }
+
+      if (solde.solde_restant < nbJours) {
+        return res.status(400).json({ message: "Solde de congé insuffisant" });
+      }
+
+      await solde.update({
+        solde_restant: solde.solde_restant - nbJours,
+      });
+    }
+
+    res.json(absence);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 };
+
 
 const deleteAbsence = async (req, res) => {
   try {

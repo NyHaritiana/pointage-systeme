@@ -1,8 +1,17 @@
 const Employee = require("../models/Employee.js")
+const SoldeConge = require('../models/SoldeConge');
 
 const createEmployee = async (req, res) => {
   try {
     const employee = await Employee.create(req.body);
+
+    await SoldeConge.create({
+      id_employee: employee.id_employee,
+      annee: new Date().getFullYear(),
+      solde_initial: 30,
+      solde_restant: 30,
+    });
+
     res.status(201).json(employee);
   } catch (error) {
     res.status(400).json({ message: error.message });

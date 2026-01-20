@@ -16,209 +16,224 @@ import {
 } from "../api/absenceApi";
 import type { Absence } from "../api/absenceApi";
 
+/* ================= TYPES ================= */
+
 interface CalendarEvent extends EventInput {
   id: string;
   title: string;
   start: string;
   end?: string;
+  backgroundColor?: string;
+  borderColor?: string;
   extendedProps: {
-    calendar: string;
     motif?: string;
     id_employee?: number;
     statut?: Absence["statut"];
   };
 }
 
+/* ================= COMPOSANT ================= */
+
 const Calendar: React.FC = () => {
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-  const [eventType, setEventType] = useState<Absence["type_absence"]>("Conge Paye");
-  const [eventMotif, setEventMotif] = useState("");
-  const [eventStartDate, setEventStartDate] = useState("");
-  const [eventEndDate, setEventEndDate] = useState("");
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
   const calendarRef = useRef<FullCalendar>(null);
 
   const { isOpen, openModal, closeModal } = useModal();
 
-  // Récupération de l'utilisateur connecté
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+
+  const [eventType, setEventType] =
+    useState<Absence["type_absence"]>("Conge Paye");
+  const [eventMotif, setEventMotif] = useState("");
+  const [eventStartDate, setEventStartDate] = useState("");
+  const [eventEndDate, setEventEndDate] = useState("");
+
+  // --- Solde congé (simulation)
+  const [soldeAvant, setSoldeAvant] = useState<number>(0);
+  const [joursDemandes, setJoursDemandes] = useState<number>(0);
+  const [soldeApres, setSoldeApres] = useState<number>(0);
+
+  /* ================= UTILISATEUR ================= */
+
   const storedUser = localStorage.getItem("user");
   const user = storedUser ? JSON.parse(storedUser) : null;
   const id_employee: number = user?.employee?.id_employee || 0;
+
+  /* ================= UTILS ================= */
+
+  const calculerJoursOuvres = (debut: string, fin: string): number => {
+    const start = new Date(debut);
+    const end = new Date(fin);
+    let count = 0;
+    const current = new Date(start);
+
+    while (current <= end) {
+      const day = current.getDay(); // 0 = dimanche, 6 = samedi
+      if (day !== 0 && day !== 6) count++;
+      current.setDate(current.getDate() + 1);
+    }
+    return count;
+  };
+
+  const getStatusColor = (statut?: Absence["statut"]) => {
+    switch (statut) {
+      case "Approuve":
+        return "#16a34a";
+      case "Rejete":
+        return "#dc2626";
+      default:
+        return "#2563eb"; // En attente
+    }
+  };
+
+  /* ================= SOLDE ================= */
+
+  const loadSolde = async () => {
+    try {
+      const res = await fetch(`/api/solde-conge/${id_employee}`);
+      const data = await res.json();
+      setSoldeAvant(data.solde_restant);
+    } catch (error) {
+      console.error("Erreur chargement solde", error);
+    }
+  };
+
+  /* ================= EFFECTS ================= */
 
   useEffect(() => {
     if (!id_employee) return;
 
     const loadAbsences = async () => {
-      try {
-        const data = await getAbsences();
+      const data = await getAbsences();
 
-        const convertedEvents: CalendarEvent[] = data
-          .filter((a) => a.id_employee === id_employee) // Seulement ses absences
-          .map((a) => ({
-            id: a.id_absence.toString(),
-            title: a.type_absence,
-            start: a.date_debut,
-            end: a.date_fin,
-            extendedProps: {
-              calendar: getColor(a.type_absence),
-              motif: a.motif || "",
-              id_employee: a.id_employee,
-              statut: a.statut,
-            },
-          }));
+      const mapped: CalendarEvent[] = data
+        .filter((a) => a.id_employee === id_employee)
+        .map((a) => ({
+          id: a.id_absence.toString(),
+          title: a.type_absence,
+          start: a.date_debut,
+          end: a.date_fin,
+          backgroundColor: getStatusColor(a.statut),
+          borderColor: getStatusColor(a.statut),
+          extendedProps: {
+            motif: a.motif,
+            id_employee: a.id_employee,
+            statut: a.statut,
+          },
+        }));
 
-        setEvents(convertedEvents);
-      } catch (err) {
-        console.error("Erreur chargement absences :", err);
-      }
+      setEvents(mapped);
     };
 
     loadAbsences();
   }, [id_employee]);
 
-  const getColor = (type: Absence["type_absence"]) => {
-    switch (type) {
-      case "Conge Paye":
-        return "rouge";
-      case "Arret Maladie":
-        return "vert";
-      case "Permission":
-        return "bleu";
-      case "Conge de Maternite":
-        return "violet";
-      case "Conge de Paternite":
-        return "cyan";
-      case "Assistance Maternelle":
-        return "orange";
-      case "Conge Formation":
-        return "indigo";
-      case "Mission":
-        return "gris";
-      default:
-        return "gris";
+  useEffect(() => {
+    if (!eventStartDate || !eventEndDate) {
+      setJoursDemandes(0);
+      setSoldeApres(soldeAvant);
+      return;
     }
-  };
+
+    const jours = calculerJoursOuvres(eventStartDate, eventEndDate);
+    setJoursDemandes(jours);
+    setSoldeApres(soldeAvant - jours);
+  }, [eventStartDate, eventEndDate, soldeAvant]);
+
+  /* ================= HANDLERS ================= */
 
   const handleDateSelect = (selectInfo: DateSelectArg) => {
-    resetModalFields();
+    resetModal();
     setEventStartDate(selectInfo.startStr);
     setEventEndDate(selectInfo.endStr || selectInfo.startStr);
+    loadSolde();
     openModal();
   };
 
   const handleEventClick = (clickInfo: EventClickArg) => {
-    const event = clickInfo.event;
+    const ev = clickInfo.event as unknown as CalendarEvent;
 
-    setSelectedEvent(event as unknown as CalendarEvent);
-    setEventType(event.title as Absence["type_absence"]);
-    setEventStartDate(event.start?.toISOString().split("T")[0] || "");
-    setEventEndDate(event.end?.toISOString().split("T")[0] || "");
-    setEventMotif((event.extendedProps && event.extendedProps.motif) || "");
-
+    setSelectedEvent(ev);
+    setEventType(ev.title as Absence["type_absence"]);
+    setEventMotif(ev.extendedProps.motif || "");
+    setEventStartDate(ev.startStr);
+    setEventEndDate(ev.endStr || ev.startStr);
+    loadSolde();
     openModal();
   };
 
   const handleAddOrUpdateEvent = async () => {
-    try {
-      if (!eventType || !eventStartDate || !eventEndDate) {
-        alert("Remplissez le type et les dates.");
-        return;
-      }
+    if (soldeApres < 0) {
+      alert("Solde de congé insuffisant");
+      return;
+    }
 
-      if (selectedEvent) {
-        const updatedData: Partial<Omit<Absence, "id_absence">> = {
-          id_employee,
-          type_absence: eventType,
-          date_debut: eventStartDate,
-          date_fin: eventEndDate,
-          motif: eventMotif,
-        };
+    if (selectedEvent) {
+      await editAbsence(Number(selectedEvent.id), {
+        type_absence: eventType,
+        date_debut: eventStartDate,
+        date_fin: eventEndDate,
+        motif: eventMotif,
+        id_employee,
+      });
+    } else {
+      const newAbsence = await addAbsence({
+        id_employee,
+        type_absence: eventType,
+        date_debut: eventStartDate,
+        date_fin: eventEndDate,
+        motif: eventMotif,
+        statut: "En attente",
+      });
 
-        const updatedAbsence = await editAbsence(Number(selectedEvent.id), updatedData);
-
-        setEvents((prev) =>
-          prev.map((ev) =>
-            ev.id === selectedEvent.id
-              ? {
-                  ...ev,
-                  title: updatedAbsence.type_absence,
-                  start: updatedAbsence.date_debut,
-                  end: updatedAbsence.date_fin,
-                  extendedProps: {
-                    calendar: getColor(updatedAbsence.type_absence),
-                    motif: updatedAbsence.motif,
-                    id_employee: updatedAbsence.id_employee,
-                    statut: updatedAbsence.statut,
-                  },
-                }
-              : ev
-          )
-        );
-      } else {
-        const createBody: Omit<Absence, "id_absence"> = {
-          id_employee,
-          type_absence: eventType,
-          date_debut: eventStartDate,
-          date_fin: eventEndDate,
-          motif: eventMotif,
-          statut: "En attente",
-        };
-
-        const newAbsence = await addAbsence(createBody);
-
-        const newEvent: CalendarEvent = {
+      setEvents((prev) => [
+        ...prev,
+        {
           id: newAbsence.id_absence.toString(),
           title: newAbsence.type_absence,
           start: newAbsence.date_debut,
           end: newAbsence.date_fin,
+          backgroundColor: "#2563eb",
+          borderColor: "#2563eb",
           extendedProps: {
-            calendar: getColor(newAbsence.type_absence),
             motif: newAbsence.motif,
             id_employee: newAbsence.id_employee,
             statut: newAbsence.statut,
           },
-        };
-
-        setEvents((prev) => [...prev, newEvent]);
-      }
-
-      closeModal();
-      resetModalFields();
-    } catch (err) {
-      console.error("Erreur ajout/modif :", err);
-      alert("Une erreur est survenue lors de l'enregistrement.");
+        },
+      ]);
     }
+
+    closeModal();
+    resetModal();
   };
 
   const handleDelete = async () => {
     if (!selectedEvent) return;
-    if (!confirm("Voulez-vous vraiment supprimer cette absence ?")) return;
-
-    try {
-      await deleteAbsence(Number(selectedEvent.id));
-      setEvents((prev) => prev.filter((ev) => ev.id !== selectedEvent.id));
-
-      closeModal();
-      resetModalFields();
-    } catch (error) {
-      console.error("Erreur suppression absence :", error);
-      alert("Erreur lors de la suppression.");
-    }
+    await deleteAbsence(Number(selectedEvent.id));
+    setEvents((prev) => prev.filter((e) => e.id !== selectedEvent.id));
+    closeModal();
+    resetModal();
   };
 
-  const resetModalFields = () => {
+  const resetModal = () => {
     setSelectedEvent(null);
     setEventType("Conge Paye");
     setEventMotif("");
     setEventStartDate("");
     setEventEndDate("");
+    setSoldeAvant(0);
+    setJoursDemandes(0);
+    setSoldeApres(0);
   };
+
+  /* ================= RENDER ================= */
 
   return (
     <>
       <PageMeta title="Calendrier des absences" description="Gestion RH" />
 
-      <div className="rounded-2xl border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-900 p-4">
+      <div className="bg-white dark:bg-dark-900 rounded-xl p-4">
         <FullCalendar
           ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -237,13 +252,24 @@ const Calendar: React.FC = () => {
 
       <Modal isOpen={isOpen} onClose={closeModal} className="max-w-[700px] p-6">
         <h3 className="text-xl font-semibold mb-4">
-          {selectedEvent ? "Modifier une absence" : "Ajouter une absence"}
+          {selectedEvent ? "Modifier une absence" : "Nouvelle demande d'absence"}
         </h3>
 
-        <label className="block mb-1">Type d'absence</label>
+        {/* SOLDE */}
+        <div className="mb-4 p-4 rounded border bg-gray-50">
+          <p>Solde avant : <strong>{soldeAvant}</strong> jours</p>
+          <p>Jours demandés : <strong>{joursDemandes}</strong></p>
+          <p className={soldeApres < 0 ? "text-red-600" : "text-green-600"}>
+            Solde estimé après : <strong>{soldeApres}</strong>
+          </p>
+        </div>
+
+        {/* FORM */}
         <select
           value={eventType}
-          onChange={(e) => setEventType(e.target.value as Absence["type_absence"])}
+          onChange={(e) =>
+            setEventType(e.target.value as Absence["type_absence"])
+          }
           className="w-full mb-3 p-2 border rounded"
         >
           <option value="Conge Paye">Congé Payé</option>
@@ -256,15 +282,14 @@ const Calendar: React.FC = () => {
           <option value="Mission">Mission</option>
         </select>
 
-        <label className="block mb-1">Motif</label>
         <input
           type="text"
+          placeholder="Motif"
           value={eventMotif}
           onChange={(e) => setEventMotif(e.target.value)}
           className="w-full mb-3 p-2 border rounded"
         />
 
-        <label className="block mb-1">Date début</label>
         <input
           type="date"
           value={eventStartDate}
@@ -272,12 +297,11 @@ const Calendar: React.FC = () => {
           className="w-full mb-3 p-2 border rounded"
         />
 
-        <label className="block mb-1">Date fin</label>
         <input
           type="date"
           value={eventEndDate}
           onChange={(e) => setEventEndDate(e.target.value)}
-          className="w-full mb-5 p-2 border rounded"
+          className="w-full mb-4 p-2 border rounded"
         />
 
         <div className="flex justify-end gap-3">
@@ -298,7 +322,7 @@ const Calendar: React.FC = () => {
             onClick={handleAddOrUpdateEvent}
             className="px-4 py-2 bg-blue-600 text-white rounded"
           >
-            {selectedEvent ? "Mettre à jour" : "Ajouter"}
+            {selectedEvent ? "Mettre à jour" : "Envoyer la demande"}
           </button>
         </div>
       </Modal>
