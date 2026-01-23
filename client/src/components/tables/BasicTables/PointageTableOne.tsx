@@ -2,10 +2,16 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../ui/table";
 import Badge from "../../ui/badge/Badge";
-import { Pointage, getPointages, enregistrerArrivee, enregistrerDepart } from "../../../api/pointageApi";
+import { 
+  Pointage, 
+  getPointages, 
+  enregistrerArrivee, 
+  enregistrerDepart,
+  convertToLocalTime 
+} from "../../../api/pointageApi";
 import { Horaire, getHoraires } from "../../../api/horaireApi";
 import { Employee, getEmployees } from "../../../api/employeeApi";
-import { FiLogIn, FiLogOut, FiClock, FiRefreshCw } from "react-icons/fi";
+import { FiLogIn, FiLogOut, FiClock, FiRefreshCw, FiGlobe } from "react-icons/fi";
 
 // Type étendu qui inclut le flag isVirtual et l'heure théorique
 type ExtendedPointage = Pointage & {
@@ -30,6 +36,12 @@ export default function PointageTableOne() {
 
   // État de chargement
   const [loading, setLoading] = useState(false);
+  const [timezone, setTimezone] = useState<string>("");
+
+  useEffect(() => {
+    // Déterminer le fuseau horaire local
+    setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  }, []);
 
   // Charger les données
   const fetchData = async () => {
@@ -78,17 +90,47 @@ export default function PointageTableOne() {
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString("fr-FR");
 
-  const formatTime = (timeStr: string) => {
+  /**
+   * CORRECTION : Formater l'heure avec conversion de fuseau horaire
+   */
+  const formatTime = (timeStr: string): string => {
     if (!timeStr || timeStr.trim() === "" || timeStr === "null") return "-";
     
-    // Si l'heure est au format HH:mm:ss, prendre seulement HH:mm
-    if (timeStr.includes(':')) {
-      const parts = timeStr.split(':');
-      if (parts.length >= 2) {
-        return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+    try {
+      // Essayer de convertir si c'est en UTC
+      const convertedTime = convertToLocalTime(timeStr);
+      
+      // Si la conversion a fonctionné, formatter HH:mm
+      if (convertedTime && convertedTime !== timeStr) {
+        const parts = convertedTime.split(':');
+        if (parts.length >= 2) {
+          return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+        }
       }
+      
+      // Sinon, utiliser le formatage normal
+      if (timeStr.includes(':')) {
+        const parts = timeStr.split(':');
+        if (parts.length >= 2) {
+          return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+        }
+      }
+      
+      return timeStr;
+    } catch (error) {
+      console.error("Erreur formatTime:", error);
+      return timeStr;
     }
-    return timeStr;
+  };
+
+  /**
+   * Fonction pour obtenir l'heure actuelle locale pour l'affichage
+   */
+  const getCurrentLocalTime = (): string => {
+    const maintenant = new Date();
+    const heures = maintenant.getHours().toString().padStart(2, '0');
+    const minutes = maintenant.getMinutes().toString().padStart(2, '0');
+    return `${heures}:${minutes}`;
   };
 
   /**
@@ -100,18 +142,14 @@ export default function PointageTableOne() {
     const pointageDate = new Date(datePointage);
     pointageDate.setHours(0, 0, 0, 0);
     
-    // Filtrer les horaires dont la semaine est <= à la date du pointage
     const horairesApplicables = horaires.filter(h => {
       const semaineDate = new Date(h.semaine);
       semaineDate.setHours(0, 0, 0, 0);
       return semaineDate <= pointageDate;
     });
 
-    if (horairesApplicables.length === 0) {
-      return null;
-    }
+    if (horairesApplicables.length === 0) return null;
 
-    // Prendre l'horaire le plus récent
     const horaire = horairesApplicables.sort(
       (a, b) => new Date(b.semaine).getTime() - new Date(a.semaine).getTime()
     )[0];
@@ -123,34 +161,30 @@ export default function PointageTableOne() {
    * Calcule le statut et le retard en minutes pour un pointage
    */
   const getStatutAndRetard = (item: ExtendedPointage): { statut: string, retardMinutes: number } => {
-    // Cas 1: Absence virtuelle
     if (item.isVirtual) {
       return { statut: "Absent", retardMinutes: 0 };
     }
 
-    // Cas 2: Pas d'heure d'arrivée = Absent
     if (!item.heure_arrivee || item.heure_arrivee.trim() === "" || item.heure_arrivee === "null") {
       return { statut: "Absent", retardMinutes: 0 };
     }
 
-    // Cas 3: Si le statut est déjà "Permission", on ne recalcule pas
     if (item.statut === "Permission") {
       return { statut: "Permission", retardMinutes: 0 };
     }
 
-    // Calcul du retard
     let retardMinutes = 0;
     try {
       const datePointage = new Date(item.date_pointage);
       const horaire = getHoraireForDate(datePointage);
       
       if (horaire) {
-        // Extraire l'heure d'arrivée réelle
-        const arriveeParts = item.heure_arrivee.split(':');
+        // Utiliser l'heure formatée (déjà convertie si nécessaire)
+        const heureArriveeFormatted = formatTime(item.heure_arrivee);
+        const arriveeParts = heureArriveeFormatted.split(':');
         const heureArrivee = parseInt(arriveeParts[0], 10) || 0;
         const minuteArrivee = parseInt(arriveeParts[1], 10) || 0;
         
-        // Extraire l'heure théorique
         const theoriqueParts = horaire.heure_entree.split(':');
         const heureTheorique = parseInt(theoriqueParts[0], 10) || 9;
         const minuteTheorique = parseInt(theoriqueParts[1], 10) || 0;
@@ -165,7 +199,6 @@ export default function PointageTableOne() {
       console.error("Erreur calcul retard:", error, item);
     }
 
-    // Détermination du statut
     let statut = "Présent";
     
     if (retardMinutes > 0) {
@@ -198,10 +231,8 @@ export default function PointageTableOne() {
    * Crée un tableau combiné avec pointages réels et absences virtuelles
    */
   const getCombinedData = (): ExtendedPointage[] => {
-    // Formater la date pour la comparaison
     const dateFormatted = dateFilter;
 
-    // Pointages existants pour la date sélectionnée
     const pointagesDuJour = pointages.filter(p => {
       try {
         const pointageDate = new Date(p.date_pointage);
@@ -212,19 +243,14 @@ export default function PointageTableOne() {
       }
     });
 
-    console.log("Pointages du jour:", pointagesDuJour.length, "pour date:", dateFormatted);
-
-    // Employés qui ont déjà pointé aujourd'hui
     const employeesAyantPointe = new Set(
       pointagesDuJour.map(p => p.id_employee)
     );
 
-    // Employés qui n'ont pas encore pointé
     const employeesNonPointe = employees.filter(emp => 
       !employeesAyantPointe.has(emp.id_employee)
     );
 
-    // Convertir les employés non pointés en objets pointage "virtuels"
     const absencesVirtuelles: ExtendedPointage[] = employeesNonPointe.map(emp => {
       const datePointage = new Date(dateFormatted);
       const horaire = getHoraireForDate(datePointage);
@@ -245,7 +271,6 @@ export default function PointageTableOne() {
       };
     });
 
-    // Ajouter le flag isVirtual et heure théorique aux pointages existants
     const pointagesAvecFlag = pointagesDuJour.map(p => {
       const horaire = getHoraireForDate(new Date(p.date_pointage));
       
@@ -256,11 +281,7 @@ export default function PointageTableOne() {
       };
     });
 
-    // Combiner pointages réels et absences virtuelles
-    const combined = [...pointagesAvecFlag, ...absencesVirtuelles];
-    console.log("Données combinées:", combined.length, "dont virtuelles:", absencesVirtuelles.length);
-    
-    return combined;
+    return [...pointagesAvecFlag, ...absencesVirtuelles];
   };
 
   /**
@@ -268,20 +289,15 @@ export default function PointageTableOne() {
    */
   const handlePointerArrivee = async (employeeId: number) => {
     try {
-      console.log("Pointage arrivée pour employé:", employeeId, "date:", dateFilter);
+      const heureActuelle = getCurrentLocalTime();
       
-      // Afficher confirmation
-      if (!confirm(`Pointer l'arrivée pour l'employé ${employeeId} à la date ${dateFilter} ?`)) {
+      if (!confirm(`Pointer l'arrivée pour l'employé ${employeeId} à ${heureActuelle} ?`)) {
         return;
       }
 
-      // Enregistrer l'arrivée avec la date du filtre
       await enregistrerArrivee(employeeId, dateFilter);
-      
-      // Rafraîchir les données
       await fetchData();
-      
-      alert("Arrivée enregistrée avec succès !");
+      alert(`Arrivée enregistrée à ${heureActuelle} !`);
     } catch (error: unknown) {
       console.error("Erreur lors du pointage d'arrivée :", error);
       
@@ -303,27 +319,27 @@ export default function PointageTableOne() {
    */
   const handlePointerDepart = async (pointageId: number) => {
     try {
-      console.log("Pointage départ pour pointage:", pointageId);
+      const heureActuelle = getCurrentLocalTime();
       
-      if (!confirm("Pointer le départ maintenant ?")) {
+      if (!confirm(`Pointer le départ à ${heureActuelle} ?`)) {
         return;
       }
 
-      // Enregistrer le départ
       await enregistrerDepart(pointageId);
-      
-      // Rafraîchir les données
       await fetchData();
-      
-      alert("Départ enregistré avec succès !");
+      alert(`Départ enregistré à ${heureActuelle} !`);
     } catch (error: unknown) {
       console.error("Erreur lors du pointage de départ :", error);
       
-      let errorMessage = "Échec de l'enregistrement";
+      let errorMessage = "Échec de l'enregistrement du départ";
       
       if (axios.isAxiosError(error)) {
         const errorData = error.response?.data as { message?: string };
         errorMessage = errorData?.message || error.message || errorMessage;
+        
+        if (error.response?.status === 404) {
+          errorMessage = `Route non trouvée. L'API attend /api/pointages/depart/${pointageId}`;
+        }
       } else if (error instanceof Error) {
         errorMessage = error.message;
       }
@@ -344,13 +360,11 @@ export default function PointageTableOne() {
 
   // Appliquer les filtres supplémentaires
   const filteredData = combinedData.filter((item) => {
-    // Filtre par employé sélectionné
     let matchEmployee = true;
     if (selectedEmployee !== "all") {
       matchEmployee = item.id_employee === Number(selectedEmployee);
     }
     
-    // Filtre par nom/prénom
     let matchName = true;
     if (searchName.trim() !== "") {
       const searchLower = searchName.toLowerCase().trim();
@@ -440,6 +454,13 @@ export default function PointageTableOne() {
               <FiRefreshCw className={loading ? "animate-spin" : ""} />
               Rafraîchir
             </button>
+          </div>
+
+          {/* Info fuseau horaire */}
+          <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-md">
+            <FiGlobe className="text-blue-500" />
+            <span>Fuseau: {timezone}</span>
+            <span className="text-xs">(Heure locale)</span>
           </div>
 
           {/* Filtre par employé */}

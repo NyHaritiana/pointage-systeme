@@ -1,3 +1,4 @@
+// src/api/pointageApi.ts
 import axios from "axios";
 
 // URL de base de l'API backend
@@ -19,27 +20,121 @@ export interface Pointage {
 interface ApiResponse {
   pointage: Pointage;
   message: string;
+  timestamp?: string;
 }
 
 /**
- * Enregistrer l'arrivée d'un employé avec l'heure actuelle
+ * Obtenir l'heure locale formatée (correction fuseau horaire)
+ */
+const getLocalTime = (): { heure: string; date: string } => {
+  const maintenant = new Date();
+  
+  // Utiliser l'heure locale directement
+  const heures = maintenant.getHours().toString().padStart(2, '0');
+  const minutes = maintenant.getMinutes().toString().padStart(2, '0');
+  const secondes = maintenant.getSeconds().toString().padStart(2, '0');
+  
+  const annee = maintenant.getFullYear();
+  const mois = (maintenant.getMonth() + 1).toString().padStart(2, '0');
+  const jour = maintenant.getDate().toString().padStart(2, '0');
+  
+  return {
+    heure: `${heures}:${minutes}:${secondes}`,
+    date: `${annee}-${mois}-${jour}`
+  };
+};
+
+/**
+ * Fonction pour convertir une heure UTC en heure locale pour l'affichage
+ * Exportée pour être utilisée dans le composant
+ */
+export const convertToLocalTime = (timeStr: string): string => {
+  if (!timeStr || timeStr.trim() === "" || timeStr === "null") return "";
+  
+  try {
+    // Si l'heure est déjà au format HH:mm:ss
+    const parts = timeStr.split(':');
+    if (parts.length < 2) return timeStr;
+    
+    const hours = parseInt(parts[0], 10);
+    const minutes = parseInt(parts[1], 10);
+    
+    // Vérifier si c'est une heure valide
+    if (isNaN(hours) || isNaN(minutes)) return timeStr;
+    
+    // Créer une date avec l'heure
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+    
+    // Vérifier si l'heure semble être en UTC (heures > 23 après conversion locale)
+    const localHours = date.getHours();
+    const localMinutes = date.getMinutes();
+    
+    // Formater l'heure locale
+    const formattedHours = localHours.toString().padStart(2, '0');
+    const formattedMinutes = localMinutes.toString().padStart(2, '0');
+    
+    return `${formattedHours}:${formattedMinutes}`;
+  } catch (error) {
+    console.error("Erreur conversion heure:", error, timeStr);
+    return timeStr;
+  }
+};
+
+/**
+ * Version alternative qui tente de détecter si l'heure est en UTC
+ */
+export const convertToLocalTimeWithDetection = (timeStr: string): string => {
+  if (!timeStr || timeStr.trim() === "" || timeStr === "null") return "";
+  
+  try {
+    const parts = timeStr.split(':');
+    if (parts.length < 2) return timeStr;
+    
+    const hours = parseInt(parts[0], 10);
+    const minutes = parseInt(parts[1], 10);
+    
+    if (isNaN(hours) || isNaN(minutes)) return timeStr;
+    
+    // Si l'heure est > 23, c'est probablement en UTC mal formaté
+    if (hours >= 24) {
+      // Convertir les heures UTC
+      const utcHours = hours % 24;
+      const date = new Date();
+      date.setUTCHours(utcHours, minutes, 0, 0);
+      
+      const localHours = date.getHours().toString().padStart(2, '0');
+      const localMinutes = date.getMinutes().toString().padStart(2, '0');
+      
+      return `${localHours}:${localMinutes}`;
+    }
+    
+    // Sinon, utiliser l'heure telle quelle
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  } catch (error) {
+    console.error("Erreur conversion avec détection:", error);
+    return timeStr;
+  }
+};
+
+/**
+ * Enregistrer l'arrivée d'un employé avec l'heure locale
  */
 export const enregistrerArrivee = async (id_employee: number, date?: string): Promise<Pointage> => {
   try {
-    // Générer l'heure actuelle au format HH:mm:ss
-    const maintenant = new Date();
-    const heures = maintenant.getHours().toString().padStart(2, '0');
-    const minutes = maintenant.getMinutes().toString().padStart(2, '0');
-    const secondes = maintenant.getSeconds().toString().padStart(2, '0');
-    const heureActuelle = `${heures}:${minutes}:${secondes}`;
+    // Obtenir l'heure locale
+    const localTime = getLocalTime();
+    const heureActuelle = localTime.heure;
     
     // Utiliser la date fournie ou aujourd'hui
-    const datePointage = date || maintenant.toISOString().split('T')[0];
+    const datePointage = date || localTime.date;
     
     console.log("Envoi requête arrivée:", {
       id_employee,
       date: datePointage,
-      heure_arrivee: heureActuelle
+      heure_arrivee: heureActuelle,
+      fuseau_horaire: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      offset: new Date().getTimezoneOffset()
     });
     
     const response = await axios.post<ApiResponse>(
@@ -47,7 +142,9 @@ export const enregistrerArrivee = async (id_employee: number, date?: string): Pr
       { 
         id_employee,
         date: datePointage,
-        heure_arrivee: heureActuelle
+        heure_arrivee: heureActuelle,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        timezone_offset: new Date().getTimezoneOffset()
       },
       {
         headers: {
@@ -66,7 +163,8 @@ export const enregistrerArrivee = async (id_employee: number, date?: string): Pr
       console.error("Détails erreur:", {
         status: error.response?.status,
         data: error.response?.data,
-        message: error.message
+        message: error.message,
+        url: `${API_BASE_URL}/api/pointages/arrivee`
       });
     }
     
@@ -75,28 +173,28 @@ export const enregistrerArrivee = async (id_employee: number, date?: string): Pr
 };
 
 /**
- * CORRECTION : Enregistrer le départ avec la bonne URL /depart/:id_pointage
+ * Enregistrer le départ d'un employé avec l'heure locale
  */
 export const enregistrerDepart = async (id_pointage: number): Promise<Pointage> => {
   try {
-    // Générer l'heure actuelle pour le départ
-    const maintenant = new Date();
-    const heures = maintenant.getHours().toString().padStart(2, '0');
-    const minutes = maintenant.getMinutes().toString().padStart(2, '0');
-    const secondes = maintenant.getSeconds().toString().padStart(2, '0');
-    const heureDepart = `${heures}:${minutes}:${secondes}`;
+    // Obtenir l'heure locale
+    const localTime = getLocalTime();
+    const heureDepart = localTime.heure;
     
     console.log("Envoi requête départ:", {
       id_pointage,
-      heure_depart: heureDepart
+      heure_depart: heureDepart,
+      fuseau_horaire: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      offset: new Date().getTimezoneOffset()
     });
     
-    // CORRECTION : Utiliser la bonne URL /depart/:id_pointage
     const response = await axios.put<ApiResponse>(
       `${API_BASE_URL}/api/pointages/depart/${id_pointage}`,
       { 
         heure_depart: heureDepart,
-        id_pointage: id_pointage  // Peut aussi être envoyé dans le body si nécessaire
+        id_pointage: id_pointage,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        timezone_offset: new Date().getTimezoneOffset()
       },
       {
         headers: {
@@ -119,9 +217,6 @@ export const enregistrerDepart = async (id_pointage: number): Promise<Pointage> 
         url: error.config?.url,
         method: error.config?.method
       });
-      
-      // Afficher plus de détails pour le débogage
-      console.log("URL complète tentée:", `${API_BASE_URL}/api/pointages/depart/${id_pointage}`);
     }
     
     throw error;
