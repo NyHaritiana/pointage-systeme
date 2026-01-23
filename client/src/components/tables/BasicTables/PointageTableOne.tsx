@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
+import axios from "axios";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../ui/table";
 import Badge from "../../ui/badge/Badge";
 import { Pointage, getPointages, enregistrerArrivee, enregistrerDepart } from "../../../api/pointageApi";
 import { Horaire, getHoraires } from "../../../api/horaireApi";
 import { Employee, getEmployees } from "../../../api/employeeApi";
-import { FiLogIn, FiLogOut, FiClock } from "react-icons/fi";
+import { FiLogIn, FiLogOut, FiClock, FiRefreshCw } from "react-icons/fi";
 
 // Type étendu qui inclut le flag isVirtual et l'heure théorique
 type ExtendedPointage = Pointage & {
@@ -27,30 +28,68 @@ export default function PointageTableOne() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
+  // État de chargement
+  const [loading, setLoading] = useState(false);
+
   // Charger les données
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [pointagesData, horairesData, employeesData] = await Promise.all([
-          getPointages(),
-          getHoraires(),
-          getEmployees()
-        ]);
-        setPointages(pointagesData);
-        setHoraires(horairesData);
-        setEmployees(employeesData);
-      } catch (error) {
-        console.error("Erreur lors du chargement des données :", error);
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [pointagesData, horairesData, employeesData] = await Promise.all([
+        getPointages(),
+        getHoraires(),
+        getEmployees()
+      ]);
+      setPointages(pointagesData);
+      setHoraires(horairesData);
+      setEmployees(employeesData);
+      console.log("Données chargées:", {
+        pointages: pointagesData.length,
+        horaires: horairesData.length,
+        employees: employeesData.length
+      });
+    } catch (error: unknown) {
+      console.error("Erreur lors du chargement des données :", error);
+      
+      let errorMessage = "Erreur de connexion au serveur. Vérifiez votre connexion internet.";
+      
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 404) {
+          errorMessage = "Service non trouvé. Vérifiez l'URL de l'API.";
+        } else if (error.response?.status === 500) {
+          errorMessage = "Erreur interne du serveur.";
+        } else if (error.code === 'NETWORK_ERROR') {
+          errorMessage = "Impossible de se connecter au serveur. Vérifiez votre connexion internet.";
+        }
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
       }
-    };
+      
+      alert(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
   }, []);
 
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString("fr-FR");
 
-  const formatTime = (timeStr: string) =>
-    timeStr ? timeStr.slice(0, 5) : "-";
+  const formatTime = (timeStr: string) => {
+    if (!timeStr || timeStr.trim() === "" || timeStr === "null") return "-";
+    
+    // Si l'heure est au format HH:mm:ss, prendre seulement HH:mm
+    if (timeStr.includes(':')) {
+      const parts = timeStr.split(':');
+      if (parts.length >= 2) {
+        return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+      }
+    }
+    return timeStr;
+  };
 
   /**
    * Trouve l'horaire applicable pour une date donnée
@@ -72,7 +111,7 @@ export default function PointageTableOne() {
       return null;
     }
 
-    // Prendre l'horaire le plus récent (dernière semaine configurée avant la date)
+    // Prendre l'horaire le plus récent
     const horaire = horairesApplicables.sort(
       (a, b) => new Date(b.semaine).getTime() - new Date(a.semaine).getTime()
     )[0];
@@ -81,56 +120,62 @@ export default function PointageTableOne() {
   };
 
   /**
- * Calcule le statut et le retard en minutes pour un pointage
- */
-const getStatutAndRetard = (item: ExtendedPointage): { statut: string, retardMinutes: number } => {
-  // Cas 1: Absence virtuelle
-  if (item.isVirtual) {
-    return { statut: "Absent", retardMinutes: 0 };
-  }
+   * Calcule le statut et le retard en minutes pour un pointage
+   */
+  const getStatutAndRetard = (item: ExtendedPointage): { statut: string, retardMinutes: number } => {
+    // Cas 1: Absence virtuelle
+    if (item.isVirtual) {
+      return { statut: "Absent", retardMinutes: 0 };
+    }
 
-  // Cas 2: Pas d'heure d'arrivée = Absent
-  if (!item.heure_arrivee || item.heure_arrivee.trim() === "") {
-    return { statut: "Absent", retardMinutes: 0 };
-  }
+    // Cas 2: Pas d'heure d'arrivée = Absent
+    if (!item.heure_arrivee || item.heure_arrivee.trim() === "" || item.heure_arrivee === "null") {
+      return { statut: "Absent", retardMinutes: 0 };
+    }
 
-  // Cas 3: Si le statut est déjà "Permission", on ne recalcule pas
-  if (item.statut === "Permission") {
-    return { statut: "Permission", retardMinutes: 0 };
-  }
+    // Cas 3: Si le statut est déjà "Permission", on ne recalcule pas
+    if (item.statut === "Permission") {
+      return { statut: "Permission", retardMinutes: 0 };
+    }
 
-  // Calcul du retard
-  let retardMinutes = 0;
-  try {
-    const datePointage = new Date(item.date_pointage);
-    const horaire = getHoraireForDate(datePointage);
-    
-    if (horaire) {
-      const [hArr, mArr] = item.heure_arrivee.split(":").map(Number);
-      const [hDeb, mDeb] = horaire.heure_entree.split(":").map(Number);
+    // Calcul du retard
+    let retardMinutes = 0;
+    try {
+      const datePointage = new Date(item.date_pointage);
+      const horaire = getHoraireForDate(datePointage);
       
-      if (!isNaN(hArr) && !isNaN(mArr) && !isNaN(hDeb) && !isNaN(mDeb)) {
-        const arriveeMinutes = hArr * 60 + mArr;
-        const debutMinutes = hDeb * 60 + mDeb;
-        const margeTolerance = 5; // 5 minutes de tolérance
+      if (horaire) {
+        // Extraire l'heure d'arrivée réelle
+        const arriveeParts = item.heure_arrivee.split(':');
+        const heureArrivee = parseInt(arriveeParts[0], 10) || 0;
+        const minuteArrivee = parseInt(arriveeParts[1], 10) || 0;
+        
+        // Extraire l'heure théorique
+        const theoriqueParts = horaire.heure_entree.split(':');
+        const heureTheorique = parseInt(theoriqueParts[0], 10) || 9;
+        const minuteTheorique = parseInt(theoriqueParts[1], 10) || 0;
+        
+        const arriveeMinutes = heureArrivee * 60 + minuteArrivee;
+        const debutMinutes = heureTheorique * 60 + minuteTheorique;
+        const margeTolerance = 5;
+        
         retardMinutes = Math.max(0, arriveeMinutes - debutMinutes - margeTolerance);
       }
+    } catch (error: unknown) {
+      console.error("Erreur calcul retard:", error, item);
     }
-  } catch (error) {
-    console.error("Erreur calcul retard:", error);
-  }
 
-  // Détermination du statut
-  let statut = "Présent";
-  
-  if (retardMinutes > 0) {
-    statut = `Retard (${retardMinutes}min)`;
-  } else if (item.statut === "Absent") {
-    statut = "Absent";
-  }
+    // Détermination du statut
+    let statut = "Présent";
+    
+    if (retardMinutes > 0) {
+      statut = `Retard (${retardMinutes}min)`;
+    } else if (item.statut === "Absent") {
+      statut = "Absent";
+    }
 
-  return { statut, retardMinutes };
-};
+    return { statut, retardMinutes };
+  };
 
   /**
    * Obtient l'heure théorique d'entrée pour un pointage
@@ -143,7 +188,7 @@ const getStatutAndRetard = (item: ExtendedPointage): { statut: string, retardMin
     try {
       const datePointage = new Date(item.date_pointage);
       const horaire = getHoraireForDate(datePointage);
-      return horaire ? horaire.heure_entree : "09:00";
+      return horaire ? formatTime(horaire.heure_entree) : "09:00";
     } catch {
       return "09:00";
     }
@@ -155,7 +200,6 @@ const getStatutAndRetard = (item: ExtendedPointage): { statut: string, retardMin
   const getCombinedData = (): ExtendedPointage[] => {
     // Formater la date pour la comparaison
     const dateFormatted = dateFilter;
-    const datePointage = new Date(dateFormatted);
 
     // Pointages existants pour la date sélectionnée
     const pointagesDuJour = pointages.filter(p => {
@@ -167,6 +211,8 @@ const getStatutAndRetard = (item: ExtendedPointage): { statut: string, retardMin
         return false;
       }
     });
+
+    console.log("Pointages du jour:", pointagesDuJour.length, "pour date:", dateFormatted);
 
     // Employés qui ont déjà pointé aujourd'hui
     const employeesAyantPointe = new Set(
@@ -180,6 +226,7 @@ const getStatutAndRetard = (item: ExtendedPointage): { statut: string, retardMin
 
     // Convertir les employés non pointés en objets pointage "virtuels"
     const absencesVirtuelles: ExtendedPointage[] = employeesNonPointe.map(emp => {
+      const datePointage = new Date(dateFormatted);
       const horaire = getHoraireForDate(datePointage);
       
       return {
@@ -187,13 +234,13 @@ const getStatutAndRetard = (item: ExtendedPointage): { statut: string, retardMin
         id_employee: emp.id_employee,
         date_pointage: dateFormatted,
         heure_arrivee: "",
-        heure_depart: "",
+        heure_depart: null,
         statut: "Absent",
         Employee: {
           prenom: emp.prenom || "",
           nom: emp.nom || ""
         },
-        heureEntreeTheorique: horaire ? horaire.heure_entree : "09:00",
+        heureEntreeTheorique: horaire ? formatTime(horaire.heure_entree) : "09:00",
         isVirtual: true
       };
     });
@@ -205,12 +252,15 @@ const getStatutAndRetard = (item: ExtendedPointage): { statut: string, retardMin
       return {
         ...p,
         isVirtual: false,
-        heureEntreeTheorique: horaire ? horaire.heure_entree : "09:00"
+        heureEntreeTheorique: horaire ? formatTime(horaire.heure_entree) : "09:00"
       };
     });
 
     // Combiner pointages réels et absences virtuelles
-    return [...pointagesAvecFlag, ...absencesVirtuelles];
+    const combined = [...pointagesAvecFlag, ...absencesVirtuelles];
+    console.log("Données combinées:", combined.length, "dont virtuelles:", absencesVirtuelles.length);
+    
+    return combined;
   };
 
   /**
@@ -218,51 +268,33 @@ const getStatutAndRetard = (item: ExtendedPointage): { statut: string, retardMin
    */
   const handlePointerArrivee = async (employeeId: number) => {
     try {
-      const maintenant = new Date();
-      const aujourdHui = new Date(maintenant);
-      aujourdHui.setHours(0, 0, 0, 0);
+      console.log("Pointage arrivée pour employé:", employeeId, "date:", dateFilter);
       
-      // Trouver l'horaire théorique
-      const horaire = getHoraireForDate(aujourdHui);
-      const heureTheorique = horaire ? horaire.heure_entree : "09:00";
-      
-      // Formatage de l'heure actuelle
-      const heures = maintenant.getHours().toString().padStart(2, '0');
-      const minutes = maintenant.getMinutes().toString().padStart(2, '0');
-      const heureActuelle = `${heures}:${minutes}`;
-      
-      // Calcul du statut basé sur la comparaison
-      let retardMinutes = 0;
-      
-      if (horaire) {
-        const [hAct, mAct] = heureActuelle.split(":").map(Number);
-        const [hTheo, mTheo] = heureTheorique.split(":").map(Number);
-        
-        if (!isNaN(hAct) && !isNaN(mAct) && !isNaN(hTheo) && !isNaN(mTheo)) {
-          const actuelMinutes = hAct * 60 + mAct;
-          const theoMinutes = hTheo * 60 + mTheo;
-          const margeTolerance = 5;
-          retardMinutes = Math.max(0, actuelMinutes - theoMinutes - margeTolerance);
-        }
+      // Afficher confirmation
+      if (!confirm(`Pointer l'arrivée pour l'employé ${employeeId} à la date ${dateFilter} ?`)) {
+        return;
       }
-      
-      // Enregistrer l'arrivée avec le statut calculé
-      await enregistrerArrivee(employeeId);
 
+      // Enregistrer l'arrivée avec la date du filtre
+      await enregistrerArrivee(employeeId, dateFilter);
       
-      // Rafraîchir les pointages
-      const updatedPointages = await getPointages();
-      setPointages(updatedPointages);
+      // Rafraîchir les données
+      await fetchData();
       
-      // Message d'alerte approprié
-      if (retardMinutes > 0) {
-        alert(`Arrivée enregistrée à ${heureActuelle} - Retard de ${retardMinutes} minutes`);
-      } else {
-        alert(`Arrivée enregistrée à ${heureActuelle} - À l'heure`);
-      }
-    } catch (error) {
+      alert("Arrivée enregistrée avec succès !");
+    } catch (error: unknown) {
       console.error("Erreur lors du pointage d'arrivée :", error);
-      alert("Erreur lors de l'enregistrement de l'arrivée");
+      
+      let errorMessage = "Échec de l'enregistrement";
+      
+      if (axios.isAxiosError(error)) {
+        const errorData = error.response?.data as { message?: string };
+        errorMessage = errorData?.message || error.message || errorMessage;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      alert(`Erreur: ${errorMessage}`);
     }
   };
 
@@ -271,18 +303,40 @@ const getStatutAndRetard = (item: ExtendedPointage): { statut: string, retardMin
    */
   const handlePointerDepart = async (pointageId: number) => {
     try {
-      // Utiliser la fonction API pour enregistrer le départ
+      console.log("Pointage départ pour pointage:", pointageId);
+      
+      if (!confirm("Pointer le départ maintenant ?")) {
+        return;
+      }
+
+      // Enregistrer le départ
       await enregistrerDepart(pointageId);
       
-      // Rafraîchir les pointages après enregistrement
-      const updatedPointages = await getPointages();
-      setPointages(updatedPointages);
+      // Rafraîchir les données
+      await fetchData();
       
       alert("Départ enregistré avec succès !");
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Erreur lors du pointage de départ :", error);
-      alert("Erreur lors de l'enregistrement du départ");
+      
+      let errorMessage = "Échec de l'enregistrement";
+      
+      if (axios.isAxiosError(error)) {
+        const errorData = error.response?.data as { message?: string };
+        errorMessage = errorData?.message || error.message || errorMessage;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      alert(`Erreur: ${errorMessage}`);
     }
+  };
+
+  /**
+   * Rafraîchir manuellement les données
+   */
+  const handleRefresh = async () => {
+    await fetchData();
   };
 
   // Obtenir les données combinées
@@ -362,14 +416,32 @@ const getStatutAndRetard = (item: ExtendedPointage): { statut: string, retardMin
       const { statut } = getStatutAndRetard(item);
       return statut === "Permission";
     }).length,
-    avecDepart: combinedData.filter(item => item.heure_depart && !item.isVirtual).length,
+    avecDepart: combinedData.filter(item => 
+      item.heure_depart && 
+      item.heure_depart !== "null" && 
+      item.heure_depart.trim() !== "" && 
+      !item.isVirtual
+    ).length,
   };
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
       {/* Section filtres */}
       <div className="p-4 border-b border-gray-100 dark:border-white/[0.05]">
-        <div className="flex flex-wrap gap-4 mb-4">
+        <div className="flex flex-wrap gap-4 mb-4 items-end">
+          {/* Bouton rafraîchir */}
+          <div>
+            <button
+              onClick={handleRefresh}
+              disabled={loading}
+              className="px-3 py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-md flex items-center gap-2 disabled:opacity-50"
+              title="Rafraîchir les données"
+            >
+              <FiRefreshCw className={loading ? "animate-spin" : ""} />
+              Rafraîchir
+            </button>
+          </div>
+
           {/* Filtre par employé */}
           <div className="flex-1 min-w-[200px]">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -378,7 +450,8 @@ const getStatutAndRetard = (item: ExtendedPointage): { statut: string, retardMin
             <select
               value={selectedEmployee}
               onChange={(e) => handleEmployeeChange(e.target.value)}
-              className="w-full border px-3 py-2 rounded-md text-sm"
+              className="w-full border px-3 py-2 rounded-md text-sm bg-white"
+              disabled={loading}
             >
               <option value="all">Tous les employés</option>
               {employees.map(emp => (
@@ -398,7 +471,8 @@ const getStatutAndRetard = (item: ExtendedPointage): { statut: string, retardMin
               type="date"
               value={dateFilter}
               onChange={(e) => handleDateChange(e.target.value)}
-              className="w-full border px-3 py-2 rounded-md text-sm"
+              className="w-full border px-3 py-2 rounded-md text-sm bg-white"
+              disabled={loading}
             />
           </div>
 
@@ -412,15 +486,17 @@ const getStatutAndRetard = (item: ExtendedPointage): { statut: string, retardMin
               placeholder="Nom ou prénom..."
               value={searchName}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full border px-3 py-2 rounded-md text-sm"
+              className="w-full border px-3 py-2 rounded-md text-sm bg-white"
+              disabled={loading}
             />
           </div>
 
           {/* Boutons d'action */}
-          <div className="flex gap-2 self-end">
+          <div className="flex gap-2">
             <button
               onClick={resetFilters}
               className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md"
+              disabled={loading}
             >
               Réinitialiser
             </button>
@@ -437,6 +513,7 @@ const getStatutAndRetard = (item: ExtendedPointage): { statut: string, retardMin
                 • Employé: {employees.find(e => e.id_employee === Number(selectedEmployee))?.prenom || ""}
               </span>
             )}
+            {loading && <span className="ml-2 text-blue-500">Chargement...</span>}
           </div>
           
           {/* Stats rapides */}
@@ -455,176 +532,191 @@ const getStatutAndRetard = (item: ExtendedPointage): { statut: string, retardMin
             </div>
             <div className="flex items-center gap-1">
               <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
-              <span>Déjà parti: {stats.avecDepart}</span>
+              <span>Départ: {stats.avecDepart}</span>
             </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-full overflow-x-auto">
-        <Table>
-          <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
-            <TableRow>
-              <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start">ID</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start">Employé</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start">Date</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start">Heure théorique</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start">Heure d'arrivée</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start">Heure départ</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start">Statut</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start">Actions</TableCell>
-            </TableRow>
-          </TableHeader>
-
-          <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-            {filteredData.length === 0 ? (
-              <TableRow>
-                <td colSpan={8} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                  Aucun pointage trouvé pour cette date.
-                </td>
-              </TableRow>
-            ) : (
-              currentItems.map((item) => {
-                const employeeName = item.Employee
-                  ? `${item.Employee.prenom} ${item.Employee.nom}`
-                  : "Employé inconnu";
-                
-                const { statut, retardMinutes } = getStatutAndRetard(item);
-                const estVirtual = item.isVirtual;
-                const aDejaArrive = item.heure_arrivee && !estVirtual;
-                const aDejaParti = item.heure_depart && !estVirtual;
-                const heureTheorique = getHeureTheorique(item);
-                
-                return (
-                  <TableRow 
-                    key={item.id_pointage} 
-                    className={estVirtual ? "bg-red-50 dark:bg-red-900/20" : ""}
-                  >
-                    <TableCell className="px-4 py-3 text-gray-600">
-                      {estVirtual ? "ABS" : item.id_pointage}
-                    </TableCell>
-                    <TableCell className="px-4 py-3 text-gray-600">
-                      {employeeName}
-                    </TableCell>
-                    <TableCell className="px-4 py-3 text-gray-600">
-                      {formatDate(item.date_pointage)}
-                    </TableCell>
-                    <TableCell className="px-4 py-3 text-gray-600">
-                      <div className="flex items-center gap-1">
-                        <FiClock className="text-purple-500" size={14} />
-                        <span>{heureTheorique}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-4 py-3 text-gray-600">
-                      {estVirtual ? (
-                        <span className="text-red-500 italic">Non pointé</span>
-                      ) : item.heure_arrivee ? (
-                        <div className="flex items-center gap-1">
-                          <FiLogIn className="text-green-500" size={14} />
-                          <span>{formatTime(item.heure_arrivee)}</span>
-                          {retardMinutes > 0 && (
-                            <span className="text-xs text-yellow-600 bg-yellow-100 px-1 py-0.5 rounded ml-1">
-                              +{retardMinutes}min
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
-                    <TableCell className="px-4 py-3 text-gray-600">
-                      {aDejaParti ? (
-                        <div className="flex items-center gap-1">
-                          <FiLogOut className="text-blue-500" size={14} />
-                          <span>{formatTime(item.heure_depart || "")}</span>
-                        </div>
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
-                    <TableCell className="px-4 py-3">
-                      <Badge
-                        size="sm"
-                        color={
-                          statut === "Présent"
-                            ? "success"
-                            : statut.includes("Retard")
-                            ? "warning"
-                            : statut === "Permission"
-                            ? "info"
-                            : "error"
-                        }
-                      >
-                        {statut}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="px-4 py-3">
-                      <div className="flex gap-2">
-                        {estVirtual ? (
-                          <button
-                            onClick={() => handlePointerArrivee(item.id_employee)}
-                            className="px-3 py-1 text-sm bg-green-500 hover:bg-green-600 text-white rounded-md transition-colors flex items-center gap-1"
-                            title="Pointer l'arrivée"
-                          >
-                            <FiLogIn size={14} />
-                            <span>Arrivée</span>
-                          </button>
-                        ) : !aDejaArrive ? (
-                          <button
-                            onClick={() => handlePointerArrivee(item.id_employee)}
-                            className="px-3 py-1 text-sm bg-green-500 hover:bg-green-600 text-white rounded-md transition-colors flex items-center gap-1"
-                            title="Pointer l'arrivée"
-                          >
-                            <FiLogIn size={14} />
-                            <span>Arrivée</span>
-                          </button>
-                        ) : !aDejaParti ? (
-                          <button
-                            onClick={() => handlePointerDepart(item.id_pointage)}
-                            className="px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors flex items-center gap-1"
-                            title="Pointer le départ"
-                          >
-                            <FiLogOut size={14} />
-                            <span>Départ</span>
-                          </button>
-                        ) : (
-                          <span className="text-gray-500 text-sm flex items-center gap-1">
-                            <FiLogOut size={14} />
-                            Terminé
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-
-        {/* Pagination */}
-        {filteredData.length > 0 && (
-          <div className="flex justify-center items-center gap-3 py-4">
-            <button
-              className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-            >
-              Précédent
-            </button>
-
-            <span className="text-gray-700">
-              Page {currentPage} / {totalPages}
-            </span>
-
-            <button
-              className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-            >
-              Suivant
-            </button>
+        {loading ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            <span className="ml-3 text-gray-600">Chargement des données...</span>
           </div>
+        ) : (
+          <>
+            <Table>
+              <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
+                <TableRow>
+                  <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start">ID</TableCell>
+                  <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start">Employé</TableCell>
+                  <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start">Date</TableCell>
+                  <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start">Heure théorique</TableCell>
+                  <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start">Heure d'arrivée</TableCell>
+                  <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start">Heure départ</TableCell>
+                  <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start">Statut</TableCell>
+                  <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start">Actions</TableCell>
+                </TableRow>
+              </TableHeader>
+
+              <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
+                {filteredData.length === 0 ? (
+                  <TableRow>
+                    <td colSpan={8} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                      {employees.length === 0 
+                        ? "Aucun employé trouvé. Veuillez d'abord créer des employés."
+                        : "Aucun pointage trouvé pour cette date."}
+                    </td>
+                  </TableRow>
+                ) : (
+                  currentItems.map((item) => {
+                    const employeeName = item.Employee
+                      ? `${item.Employee.prenom} ${item.Employee.nom}`
+                      : `Employé #${item.id_employee}`;
+                    
+                    const { statut, retardMinutes } = getStatutAndRetard(item);
+                    const estVirtual = item.isVirtual;
+                    const aDejaArrive = item.heure_arrivee && item.heure_arrivee !== "null" && !estVirtual;
+                    const aDejaParti = item.heure_depart && item.heure_depart !== "null" && !estVirtual;
+                    const heureTheorique = getHeureTheorique(item);
+                    
+                    return (
+                      <TableRow 
+                        key={item.id_pointage} 
+                        className={estVirtual ? "bg-red-50/50 dark:bg-red-900/10" : ""}
+                      >
+                        <TableCell className="px-4 py-3 text-gray-600">
+                          {estVirtual ? "ABS" : item.id_pointage}
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-gray-600">
+                          {employeeName}
+                          {estVirtual && <span className="ml-2 text-xs text-red-500">(Absent)</span>}
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-gray-600">
+                          {formatDate(item.date_pointage)}
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-gray-600">
+                          <div className="flex items-center gap-1">
+                            <FiClock className="text-purple-500" size={14} />
+                            <span>{heureTheorique}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-gray-600">
+                          {estVirtual ? (
+                            <span className="text-red-500 italic">Non pointé</span>
+                          ) : aDejaArrive ? (
+                            <div className="flex items-center gap-1">
+                              <FiLogIn className="text-green-500" size={14} />
+                              <span>{formatTime(item.heure_arrivee)}</span>
+                              {retardMinutes > 0 && (
+                                <span className="text-xs text-yellow-600 bg-yellow-100 px-1 py-0.5 rounded ml-1">
+                                  +{retardMinutes}min
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-gray-600">
+                          {aDejaParti ? (
+                            <div className="flex items-center gap-1">
+                              <FiLogOut className="text-blue-500" size={14} />
+                              <span>{formatTime(item.heure_depart || "")}</span>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="px-4 py-3">
+                          <Badge
+                            size="sm"
+                            color={
+                              statut === "Présent"
+                                ? "success"
+                                : statut.includes("Retard")
+                                ? "warning"
+                                : statut === "Permission"
+                                ? "info"
+                                : "error"
+                            }
+                          >
+                            {statut}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="px-4 py-3">
+                          <div className="flex gap-2">
+                            {estVirtual ? (
+                              <button
+                                onClick={() => handlePointerArrivee(item.id_employee)}
+                                className="px-3 py-1 text-sm bg-green-500 hover:bg-green-600 text-white rounded-md transition-colors flex items-center gap-1"
+                                title="Pointer l'arrivée"
+                                disabled={loading}
+                              >
+                                <FiLogIn size={14} />
+                                <span>Arrivée</span>
+                              </button>
+                            ) : !aDejaArrive ? (
+                              <button
+                                onClick={() => handlePointerArrivee(item.id_employee)}
+                                className="px-3 py-1 text-sm bg-green-500 hover:bg-green-600 text-white rounded-md transition-colors flex items-center gap-1"
+                                title="Pointer l'arrivée"
+                                disabled={loading}
+                              >
+                                <FiLogIn size={14} />
+                                <span>Arrivée</span>
+                              </button>
+                            ) : !aDejaParti ? (
+                              <button
+                                onClick={() => handlePointerDepart(item.id_pointage)}
+                                className="px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors flex items-center gap-1"
+                                title="Pointer le départ"
+                                disabled={loading}
+                              >
+                                <FiLogOut size={14} />
+                                <span>Départ</span>
+                              </button>
+                            ) : (
+                              <span className="text-gray-500 text-sm flex items-center gap-1">
+                                <FiLogOut size={14} />
+                                Terminé
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+
+            {/* Pagination */}
+            {filteredData.length > 0 && totalPages > 1 && (
+              <div className="flex justify-center items-center gap-3 py-4 border-t border-gray-100">
+                <button
+                  className="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1 || loading}
+                >
+                  Précédent
+                </button>
+
+                <span className="text-gray-700 px-4">
+                  Page {currentPage} / {totalPages}
+                </span>
+
+                <button
+                  className="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages || loading}
+                >
+                  Suivant
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

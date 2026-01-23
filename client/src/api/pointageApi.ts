@@ -1,4 +1,3 @@
-// src/api/pointageApi.ts
 import axios from "axios";
 
 // URL de base de l'API backend
@@ -17,17 +16,39 @@ export interface Pointage {
   };
 }
 
+interface ApiResponse {
+  pointage: Pointage;
+  message: string;
+}
+
 /**
- * Enregistrer l'arrivée d'un employé
+ * Enregistrer l'arrivée d'un employé avec l'heure actuelle
  */
-export const enregistrerArrivee = async (id_employee: number): Promise<Pointage> => {
+export const enregistrerArrivee = async (id_employee: number, date?: string): Promise<Pointage> => {
   try {
-    console.log("Envoi requête arrivée pour employé:", id_employee);
-    console.log("URL:", `${API_BASE_URL}/api/pointages/arrivee`);
+    // Générer l'heure actuelle au format HH:mm:ss
+    const maintenant = new Date();
+    const heures = maintenant.getHours().toString().padStart(2, '0');
+    const minutes = maintenant.getMinutes().toString().padStart(2, '0');
+    const secondes = maintenant.getSeconds().toString().padStart(2, '0');
+    const heureActuelle = `${heures}:${minutes}:${secondes}`;
     
-    const response = await axios.post(
+    // Utiliser la date fournie ou aujourd'hui
+    const datePointage = date || maintenant.toISOString().split('T')[0];
+    
+    console.log("Envoi requête arrivée:", {
+      id_employee,
+      date: datePointage,
+      heure_arrivee: heureActuelle
+    });
+    
+    const response = await axios.post<ApiResponse>(
       `${API_BASE_URL}/api/pointages/arrivee`,
-      { id_employee },
+      { 
+        id_employee,
+        date: datePointage,
+        heure_arrivee: heureActuelle
+      },
       {
         headers: {
           'Content-Type': 'application/json',
@@ -38,29 +59,43 @@ export const enregistrerArrivee = async (id_employee: number): Promise<Pointage>
     
     console.log("Réponse arrivée:", response.data);
     return response.data.pointage;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Erreur enregistrerArrivee:", error);
+    
     if (axios.isAxiosError(error)) {
       console.error("Détails erreur:", {
         status: error.response?.status,
         data: error.response?.data,
-        headers: error.response?.headers
+        message: error.message
       });
     }
+    
     throw error;
   }
 };
 
 /**
- * Enregistrer le départ d'un employé
+ * Enregistrer le départ d'un employé avec l'heure actuelle
  */
 export const enregistrerDepart = async (id_pointage: number): Promise<Pointage> => {
   try {
-    console.log("Envoi requête départ pour pointage:", id_pointage);
+    // Générer l'heure actuelle pour le départ
+    const maintenant = new Date();
+    const heures = maintenant.getHours().toString().padStart(2, '0');
+    const minutes = maintenant.getMinutes().toString().padStart(2, '0');
+    const secondes = maintenant.getSeconds().toString().padStart(2, '0');
+    const heureDepart = `${heures}:${minutes}:${secondes}`;
     
-    const response = await axios.put<{ message: string; pointage: Pointage }>(
+    console.log("Envoi requête départ:", {
+      id_pointage,
+      heure_depart: heureDepart
+    });
+    
+    const response = await axios.put<ApiResponse>(
       `${API_BASE_URL}/api/pointages/${id_pointage}/depart`,
-      {},
+      { 
+        heure_depart: heureDepart
+      },
       {
         headers: {
           'Content-Type': 'application/json',
@@ -71,8 +106,16 @@ export const enregistrerDepart = async (id_pointage: number): Promise<Pointage> 
     
     console.log("Réponse départ:", response.data);
     return response.data.pointage;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Erreur enregistrerDepart:", error);
+    
+    if (axios.isAxiosError(error)) {
+      console.error("Détails erreur départ:", {
+        status: error.response?.status,
+        data: error.response?.data
+      });
+    }
+    
     throw error;
   }
 };
@@ -82,8 +125,6 @@ export const enregistrerDepart = async (id_pointage: number): Promise<Pointage> 
  */
 export const getPointages = async (): Promise<Pointage[]> => {
   try {
-    console.log("Récupération des pointages...");
-    
     const response = await axios.get<Pointage[]>(
       `${API_BASE_URL}/api/pointages`,
       {
@@ -93,9 +134,31 @@ export const getPointages = async (): Promise<Pointage[]> => {
       }
     );
     
+    console.log("Pointages récupérés:", response.data.length);
     return response.data;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Erreur getPointages:", error);
+    throw error;
+  }
+};
+
+/**
+ * Récupérer les pointages par date
+ */
+export const getPointagesByDate = async (date: string): Promise<Pointage[]> => {
+  try {
+    const response = await axios.get<Pointage[]>(
+      `${API_BASE_URL}/api/pointages/date/${date}`,
+      {
+        headers: {
+          'Accept': 'application/json'
+        }
+      }
+    );
+    
+    return response.data;
+  } catch (error: unknown) {
+    console.error("Erreur getPointagesByDate:", error);
     throw error;
   }
 };
@@ -109,7 +172,7 @@ export const checkAPIHealth = async (): Promise<boolean> => {
       timeout: 5000
     });
     return response.status === 200;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("API health check failed:", error);
     return false;
   }
