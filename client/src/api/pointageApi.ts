@@ -75,7 +75,7 @@ export const enregistrerArrivee = async (id_employee: number, date?: string): Pr
 };
 
 /**
- * Enregistrer le départ d'un employé avec l'heure actuelle
+ * CORRECTION : Enregistrer le départ avec la bonne URL /depart/:id_pointage
  */
 export const enregistrerDepart = async (id_pointage: number): Promise<Pointage> => {
   try {
@@ -91,10 +91,12 @@ export const enregistrerDepart = async (id_pointage: number): Promise<Pointage> 
       heure_depart: heureDepart
     });
     
+    // CORRECTION : Utiliser la bonne URL /depart/:id_pointage
     const response = await axios.put<ApiResponse>(
-      `${API_BASE_URL}/api/pointages/${id_pointage}/depart`,
+      `${API_BASE_URL}/api/pointages/depart/${id_pointage}`,
       { 
-        heure_depart: heureDepart
+        heure_depart: heureDepart,
+        id_pointage: id_pointage  // Peut aussi être envoyé dans le body si nécessaire
       },
       {
         headers: {
@@ -112,8 +114,14 @@ export const enregistrerDepart = async (id_pointage: number): Promise<Pointage> 
     if (axios.isAxiosError(error)) {
       console.error("Détails erreur départ:", {
         status: error.response?.status,
-        data: error.response?.data
+        data: error.response?.data,
+        message: error.message,
+        url: error.config?.url,
+        method: error.config?.method
       });
+      
+      // Afficher plus de détails pour le débogage
+      console.log("URL complète tentée:", `${API_BASE_URL}/api/pointages/depart/${id_pointage}`);
     }
     
     throw error;
